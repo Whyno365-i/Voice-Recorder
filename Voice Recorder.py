@@ -30,16 +30,36 @@ class Voice_recorder(QMainWindow):
         Top= QHBoxLayout(container_inner_main)
 
         container_side_bar= QWidget()
-        container_side_bar.setStyleSheet("background-color: #FF0000; border-radius: 5px;")
+        container_side_bar.setStyleSheet("background-color: #353535; border-radius: 5px;")
+        container_side_bar.setFixedWidth(195)
         side= QVBoxLayout(container_side_bar)
 
         #start side bar
         
         #TODO format Bar list
         Bar_list= QListWidget()
-        Bar_list.addItems(['one', 'two'])
-        Bar_list.setStyleSheet(''' 
+        Bar_list.addItems(['one', 'two', 'three', 'four', 'five', 'six', 'seven'])
+        for i in range(Bar_list.count()):
+            Bar_list.item(i).setSizeHint(QSize(0,120))
+        
 
+        Bar_list.setStyleSheet(''' 
+            QListWidget{
+                background-color: Transparent;
+                font-family: Arial; 
+                font-size: 30px; 
+                font-style: normal;     
+                }
+            
+            QListWidget::item {
+                background-color: #545454;
+                border: 2px solid #000000;
+                border-radius: 5px;
+                padding: 0px 0px;
+                }
+            QListWidget::item:hover {
+                background-color: #808080
+                }
 ''')
 
         side.addWidget(Bar_list)
@@ -61,7 +81,7 @@ class Voice_recorder(QMainWindow):
 
         #start of bottom bar
         mics= QComboBox()
-        mics.addItems(['one', 'two'])
+        mics.addItems(['one', 'two', 'three', 'four', 'five'])
         mics.setStyleSheet('''
                 QComboBox {
                     background-color: #545454;  
