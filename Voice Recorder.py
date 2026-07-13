@@ -1,8 +1,8 @@
 import sounddevice
 import soundfile
 import numpy
-from PySide6.QtWidgets import (QApplication, QMainWindow, QLabel, QWidget, QGridLayout, QVBoxLayout, 
-QHBoxLayout, QPushButton, QComboBox, QListWidget)
+from PySide6.QtWidgets import (QApplication, QMainWindow, QLabel, QWidget, QWidgetAction, QGridLayout, QVBoxLayout, QListWidgetItem,
+QHBoxLayout, QPushButton, QComboBox, QListWidget, QMenu)
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QFont
 
@@ -35,12 +35,14 @@ class Voice_recorder(QMainWindow):
         side= QVBoxLayout(container_side_bar)
 
         #start side bar
-        
-        #TODO format Bar list
         Bar_list= QListWidget()
+        Bar_list.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         Bar_list.addItems(['one', 'two', 'three', 'four', 'five', 'six', 'seven'])
         for i in range(Bar_list.count()):
-            Bar_list.item(i).setSizeHint(QSize(0,120))
+            item= Bar_list.item(i)
+            item.setSizeHint(QSize(0,120))
+            item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+
         
 
         Bar_list.setStyleSheet(''' 
@@ -69,6 +71,61 @@ class Voice_recorder(QMainWindow):
 
         container_main= QWidget()
         container_main.setStyleSheet("background-color: #800080; border-radius: 5px;")
+        Top_inner= QVBoxLayout(container_main)
+
+        #Start Container_main
+        container_inner_top_bar= QWidget()
+        container_inner_top_bar.setStyleSheet("background-color: #013220; border-radius: 5px;")
+        inner_top_bar= QHBoxLayout(container_inner_top_bar)
+
+        #Start Container_inner_top_bar
+        open_side= QPushButton('≡')
+        open_side.setFixedSize(QSize(40,40))
+        open_side.setStyleSheet(''' 
+            QPushButton {
+                background-color: Transparent;
+                font: 40px;
+                padding-bottom: 7px;
+                }
+            
+            QPushButton:hover {
+                background-color: #808080
+                }
+''')
+        name= QLabel('Name')
+        name.setFont(QFont('Arial', 20))
+
+        three_dots= QPushButton('...')
+        three_dots.setFixedSize(QSize(40,40))
+        three_dots.setStyleSheet('''
+            QPushButton {
+                background: Transparent;
+                font: 30px;
+                padding-bottom: 15px;                 
+                }
+            
+            QPushButton:hover {
+                background-color: #808080
+                }
+''')
+
+
+        inner_top_bar.addWidget(open_side)
+        inner_top_bar.addWidget(name)
+        inner_top_bar.addStretch()
+        inner_top_bar.addWidget(three_dots)
+
+
+        #End Container_inner_top_bar
+
+        container_inner_bottom_main= QWidget()
+        container_inner_bottom_main.setStyleSheet("background-color: #39FF14; border-radius: 5px;")
+        Top_inner.addWidget(container_inner_top_bar, stretch=1)
+        Top_inner.addWidget(container_inner_bottom_main, stretch=13)
+
+
+        #End Container_main
+
 
         Top.addWidget(container_side_bar, stretch=1)
         Top.addWidget(container_main, stretch=5)
