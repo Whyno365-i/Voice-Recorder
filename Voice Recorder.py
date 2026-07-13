@@ -1,6 +1,6 @@
-import sounddevice
-import soundfile
-import numpy
+import sounddevice as sd
+import soundfile as sf
+import numpy as np
 from PySide6.QtWidgets import (QApplication, QMainWindow, QLabel, QWidget, QWidgetAction, QGridLayout, QVBoxLayout, QListWidgetItem,
 QHBoxLayout, QPushButton, QComboBox, QListWidget, QMenu)
 from PySide6.QtCore import Qt, QSize
@@ -165,13 +165,15 @@ class Voice_recorder(QMainWindow):
 ''')
 
 
-        record_circle_button= QPushButton('○')
+        self.record_circle_button= QPushButton('○')
+        self.record_circle_button.setCheckable(True)
+        self.record_circle_button.clicked.connect(self.record)
 
         button_size= 65
-        record_circle_button.setFixedSize(QSize(button_size, button_size))
+        self.record_circle_button.setFixedSize(QSize(button_size, button_size))
 
         radius= button_size//2
-        record_circle_button.setStyleSheet(f"""
+        self.record_circle_button.setStyleSheet(f"""
                 QPushButton {{
                     background-color: #FF0000;
                     color: white;
@@ -180,8 +182,8 @@ class Voice_recorder(QMainWindow):
                     font-size: 16px;
                     font-weight: bold;
                 }} 
-                QPushButton:pressed {{
-                    background-color: #808080
+                QPushButton:hover {{
+                    background-color: #f22952
                 }}""")
         
 
@@ -238,7 +240,7 @@ class Voice_recorder(QMainWindow):
 
         bottom.addWidget(mics)
         bottom.addStretch(1)
-        bottom.addWidget(record_circle_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        bottom.addWidget(self.record_circle_button, alignment=Qt.AlignmentFlag.AlignCenter)
         bottom.addWidget(time, alignment=Qt.AlignmentFlag.AlignCenter)
         bottom.addWidget(Play_button, alignment= Qt.AlignmentFlag.AlignCenter)
         bottom.addWidget(Back_to_beginning, alignment= Qt.AlignmentFlag.AlignCenter)
@@ -247,6 +249,52 @@ class Voice_recorder(QMainWindow):
 
         main_layout.addWidget(container_inner_main, stretch=6)
         main_layout.addWidget(container_bottom_bar, stretch=1)
+        
+        self.sample_rate= 44100
+        self.channels= 1
+        self.max_duration= 3600
+        self.audio_data=None
+
+    def record(self, checked):
+        with open('recording number', 'r') as f:
+            n= int(f.read().strip())
+
+
+        if checked:
+            self.record_circle_button.setText('| |')
+            self.record_circle_button.setStyleSheet('''
+                QPushButton {
+                    background-color: #545454                                
+                    }
+''')
+            print('Recording')
+            self.audio_data= sd.rec(int(self.max_duration*self.sample_rate), samplerate=self.sample_rate,
+                                     channels=self.channels, dtype='float32')
+            
+            self.start_time= sd.get_stream().time
+
+        else:
+            self.record_circle_button.setText('○')
+
+            #lets say that sound card (self.start_time) says it's inernal stop watch is 120 secs
+            #then after a couple of minutes bam you stop it and get the current time 124 secs
+            #Then duration gets the difference between the two and samples_recorded and audio variable 
+            #splice it to get rid of the unnessary parts
+            duration= sd.get_stream().time - self.start_time
+            sd.stop()
+            print('finished')
+
+            samples_recorded= int(duration * self.sample_rate)
+            audio= self.audio_data[:samples_recorded] # type: ignore
+
+            ouput_name= f'audio files/recording{n}.mp3'
+            sf.write(ouput_name, audio, self.sample_rate)
+            print('success!')
+
+            n+=1
+
+            with open('recording number', 'w') as f:
+                f.write(str(n))
 
 
 
