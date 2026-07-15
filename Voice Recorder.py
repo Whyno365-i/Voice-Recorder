@@ -1,6 +1,8 @@
 import sounddevice as sd
 import soundfile as sf
 import numpy as np
+from pathlib import Path
+import re
 from PySide6.QtWidgets import (QApplication, QMainWindow, QLabel, QWidget, QWidgetAction, QGridLayout, QVBoxLayout, QListWidgetItem,
 QHBoxLayout, QPushButton, QComboBox, QListWidget, QMenu)
 from PySide6.QtCore import Qt, QSize
@@ -37,7 +39,15 @@ class Voice_recorder(QMainWindow):
         #start side bar
         Bar_list= QListWidget()
         Bar_list.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
-        Bar_list.addItems(['one', 'two', 'three', 'four', 'five', 'six', 'seven'])
+        path= Path('C:/Users/PC/OneDrive/coding/Coding files/personal/Voice Recorder/audio files')
+        path_list=[f.stem for f in path.glob('*.mp3')]
+
+        def right_order(filename):
+            return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', filename)] 
+
+        path_list.sort(key= right_order)
+        Bar_list.addItems(path_list)
+
         for i in range(Bar_list.count()):
             item= Bar_list.item(i)
             item.setSizeHint(QSize(0,120))
@@ -49,7 +59,7 @@ class Voice_recorder(QMainWindow):
             QListWidget{
                 background-color: Transparent;
                 font-family: Arial; 
-                font-size: 30px; 
+                font-size: 20px; 
                 font-style: normal;     
                 }
             
@@ -172,13 +182,13 @@ class Voice_recorder(QMainWindow):
         button_size= 65
         self.record_circle_button.setFixedSize(QSize(button_size, button_size))
 
-        radius= button_size//2
+        self.radius= button_size//2
         self.record_circle_button.setStyleSheet(f"""
                 QPushButton {{
                     background-color: #FF0000;
                     color: white;
                     border: 2px solid black;
-                    border-radius: {radius}px;
+                    border-radius: {self.radius}px;
                     font-size: 16px;
                     font-weight: bold;
                 }} 
@@ -192,39 +202,39 @@ class Voice_recorder(QMainWindow):
 
         time.setFont(QFont('Arial', 20))
 
-        Play_button= QPushButton('▶')
-        Play_button.setFixedSize(QSize(button_size, button_size))
-        Play_button.setStyleSheet(f"""
+        self.Play_button= QPushButton('▶')
+        self.Play_button.setFixedSize(QSize(button_size, button_size))
+        self.Play_button.setStyleSheet(f"""
         QPushButton {{
             background-color: #545454;
             color: white;
             border: 2px solid black;
-            border-radius: {radius}px;
+            border-radius: {self.radius}px;
             font-size: 16px;
             font-weight: bold;
         }} 
-        QPushButton:pressed {{
+        QPushButton:hover {{
             background-color: #808080
         }}""")
 
-        Back_to_beginning= QPushButton('◀◀')
-        Back_to_beginning.setFixedSize(QSize(button_size, button_size))
-        Back_to_beginning.setStyleSheet(f"""
+        self.Back_to_beginning= QPushButton('◀◀')
+        self.Back_to_beginning.setFixedSize(QSize(button_size, button_size))
+        self.Back_to_beginning.setStyleSheet(f"""
         QPushButton {{
             background-color: #545454;
             color: white;
             border: 2px solid black;
-            border-radius: {radius}px;
+            border-radius: {self.radius}px;
             font-size: 16px;
             font-weight: bold;
         }} 
-        QPushButton:pressed {{
+        QPushButton:hover {{
             background-color: #808080
         }}""")
 
-        time_speed= QPushButton('1x')
-        time_speed.setFixedSize(50, 50)
-        time_speed.setStyleSheet(f"""
+        self.time_speed= QPushButton('1x')
+        self.time_speed.setFixedSize(50, 50)
+        self.time_speed.setStyleSheet(f"""
         QPushButton {{
             background-color: #545454;
             color: white;
@@ -232,7 +242,7 @@ class Voice_recorder(QMainWindow):
             font-size: 16px;
             font-weight: bold;
         }} 
-        QPushButton:pressed {{
+        QPushButton:hover {{
             background-color: #808080
         }}""")
 
@@ -242,10 +252,10 @@ class Voice_recorder(QMainWindow):
         bottom.addStretch(1)
         bottom.addWidget(self.record_circle_button, alignment=Qt.AlignmentFlag.AlignCenter)
         bottom.addWidget(time, alignment=Qt.AlignmentFlag.AlignCenter)
-        bottom.addWidget(Play_button, alignment= Qt.AlignmentFlag.AlignCenter)
-        bottom.addWidget(Back_to_beginning, alignment= Qt.AlignmentFlag.AlignCenter)
+        bottom.addWidget(self.Play_button, alignment= Qt.AlignmentFlag.AlignCenter)
+        bottom.addWidget(self.Back_to_beginning, alignment= Qt.AlignmentFlag.AlignCenter)
         bottom.addStretch(2)
-        bottom.addWidget(time_speed)
+        bottom.addWidget(self.time_speed)
 
         main_layout.addWidget(container_inner_main, stretch=6)
         main_layout.addWidget(container_bottom_bar, stretch=1)
@@ -261,10 +271,21 @@ class Voice_recorder(QMainWindow):
 
 
         if checked:
+            self.Play_button.hide()
+            self.Back_to_beginning.hide()
+            self.time_speed.hide()
             self.record_circle_button.setText('| |')
             self.record_circle_button.setStyleSheet('''
                 QPushButton {
-                    background-color: #545454                                
+                    background-color: #545454;
+                    color: white;
+                    border: 2px solid black;
+                    font-size: 16px;
+                    font-weight: bold;                                
+                    }
+                
+                QPushButton:hover {
+                    background-color: #808080;
                     }
 ''')
             print('Recording')
@@ -274,12 +295,27 @@ class Voice_recorder(QMainWindow):
             self.start_time= sd.get_stream().time
 
         else:
+            self.Play_button.show()
+            self.Back_to_beginning.show()
+            self.time_speed.show()
             self.record_circle_button.setText('○')
+            self.record_circle_button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: #FF0000;
+                    color: white;
+                    border: 2px solid black;
+                    border-radius: {self.radius}px;
+                    font-size: 16px;
+                    font-weight: bold;
+                }} 
+                QPushButton:hover {{
+                    background-color: #f22952
+                }}""")
 
             #lets say that sound card (self.start_time) says it's inernal stop watch is 120 secs
             #then after a couple of minutes bam you stop it and get the current time 124 secs
-            #Then duration gets the difference between the two and samples_recorded and audio variable 
-            #splice it to get rid of the unnessary parts
+            #Then duration gets the difference between the two and 
+            #samples_recorded and audio variable splice it to get rid of the unnessary parts
             duration= sd.get_stream().time - self.start_time
             sd.stop()
             print('finished')
