@@ -3,8 +3,8 @@ import soundfile as sf
 import numpy as np
 from pathlib import Path
 import re
-from PySide6.QtWidgets import (QApplication, QMainWindow, QLabel, QWidget, QWidgetAction, QGridLayout, QVBoxLayout, QListWidgetItem,
-QHBoxLayout, QPushButton, QComboBox, QListWidget, QMenu)
+from PySide6.QtWidgets import (QApplication, QMainWindow, QLabel, QWidget, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton,
+                               QComboBox, QListWidget, QMenu)
 from PySide6.QtCore import Qt, QSize, QUrl
 from PySide6.QtGui import QFont
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
@@ -23,6 +23,26 @@ class Voice_recorder(QMainWindow):
         self.resize(1100, 700)
         self.setMinimumSize(500, 500)
 
+        self.the_name= ''
+        self.false= False
+        
+        self.sample_rate= 44100
+        self.channels= 1
+        self.max_duration= 3600
+        self.audio_data=None
+
+        #You have to initazile it here so you don't recreate it and you later check if the path is different and update it
+        self.player= QMediaPlayer()
+        self.audio_output= QAudioOutput()
+        self.player.setAudioOutput(self.audio_output)
+        self.audio_output.setVolume(1.0)
+        
+        #__file__ is the current file name and Path() around it turns it into a pathlib object
+        #resolve() it is everything before the current file
+        #parent is adding the current file making it a full abosoulte path
+        self.main_app()
+    
+    def main_app(self):
         main_container= QWidget()
         self.setCentralWidget(main_container)
         main_layout= QVBoxLayout(main_container)
@@ -74,7 +94,7 @@ class Voice_recorder(QMainWindow):
             QListWidget::item:hover {
                 background-color: #808080
                 }
-''')
+    ''')
 
         side.addWidget(self.Bar_list)
         self.showing= True
@@ -105,9 +125,9 @@ class Voice_recorder(QMainWindow):
             QPushButton:hover {
                 background-color: #808080
                 }
-''')
-        name= QLabel('Name')
-        name.setFont(QFont('Arial', 20))
+    ''')
+        self.name= QLabel(f'{self.the_name}')
+        self.name.setFont(QFont('Arial', 20))
 
         three_dots= QPushButton('...')
         three_dots.setFixedSize(QSize(40,40))
@@ -121,11 +141,11 @@ class Voice_recorder(QMainWindow):
             QPushButton:hover {
                 background-color: #808080
                 }
-''')
+    ''')
 
 
         inner_top_bar.addWidget(open_side)
-        inner_top_bar.addWidget(name)
+        inner_top_bar.addWidget(self.name)
         inner_top_bar.addStretch()
         inner_top_bar.addWidget(three_dots)
 
@@ -164,19 +184,19 @@ class Voice_recorder(QMainWindow):
                     font-size: 15px;
                     min-width: 90px;
                     max-width: 90px
-                           }
+                            }
                 
                 QComboBox:hover, QComboxBox:focus {
                     border: 2px solid #000000;
                     background-color: #808080                           
-                           }
+                            }
                 
                 QComboBox QAbstractItemView {
                     Background-color: #545454;
                     min-width: 214x;
                     max-width: 214px    
-                          }
-''')
+                            }
+    ''')
 
 
         self.record_circle_button= QPushButton('○')
@@ -223,6 +243,22 @@ class Voice_recorder(QMainWindow):
             background-color: #808080
         }}""")
 
+        self.Pause_button= QPushButton('| |')
+        self.Pause_button.clicked.connect(self.pause)
+        self.Pause_button.setFixedSize(QSize(button_size, button_size))
+        self.Pause_button.setStyleSheet(f"""
+        QPushButton {{
+            background-color: #545454;
+            color: white;
+            border: 2px solid black;
+            font-size: 16px;
+            font-weight: bold;
+        }} 
+        QPushButton:hover {{
+            background-color: #808080
+        }}""")
+
+
 
         self.Back_to_beginning= QPushButton('◀◀')
         self.Back_to_beginning.clicked.connect(self.back)
@@ -241,6 +277,7 @@ class Voice_recorder(QMainWindow):
         }}""")
 
         self.time_speed= QPushButton('1x')
+        self.time_speed.clicked.connect(self.speed)
         self.time_speed.setFixedSize(50, 50)
         self.time_speed.setStyleSheet(f"""
         QPushButton {{
@@ -254,35 +291,22 @@ class Voice_recorder(QMainWindow):
             background-color: #808080
         }}""")
 
-        #end bottom bar
-
         bottom.addWidget(mics)
         bottom.addStretch(1)
         bottom.addWidget(self.record_circle_button, alignment=Qt.AlignmentFlag.AlignCenter)
         bottom.addWidget(time, alignment=Qt.AlignmentFlag.AlignCenter)
         bottom.addWidget(self.Play_button, alignment= Qt.AlignmentFlag.AlignCenter)
+        bottom.addWidget(self.Pause_button, alignment= Qt.AlignmentFlag.AlignCenter)
         bottom.addWidget(self.Back_to_beginning, alignment= Qt.AlignmentFlag.AlignCenter)
         bottom.addStretch(2)
         bottom.addWidget(self.time_speed)
+        self.Pause_button.hide()
+
+        #end bottom bar
 
         main_layout.addWidget(container_inner_main, stretch=6)
         main_layout.addWidget(container_bottom_bar, stretch=1)
         self.Back_to_beginning.hide()
-        
-        self.sample_rate= 44100
-        self.channels= 1
-        self.max_duration= 3600
-        self.audio_data=None
-
-        #You have to initazile it here so you don't recreate it and you later check if the path is different and update it
-        self.player= QMediaPlayer()
-        self.audio_output= QAudioOutput()
-        self.player.setAudioOutput(self.audio_output)
-        self.audio_output.setVolume(1.0)
-        
-        #__file__ is the current file name and Path() around it turns it into a pathlib object
-        #resolve() it is everything before the current file
-        #parent is adding the current file making it a full abosoulte path
 
     def record(self, checked):
         with open('recording number', 'r') as f:
@@ -350,6 +374,21 @@ class Voice_recorder(QMainWindow):
 
             with open('recording number', 'w') as f:
                 f.write(str(n))
+            
+            new_path= Path('C:/Users/PC/OneDrive/coding/Coding files/personal/Voice Recorder/audio files')
+            new_path_list=[f.stem for f in new_path.glob('*.mp3')]
+
+            def new_right_order(filename):
+                return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', filename)] 
+
+            new_path_list.sort(key= new_right_order)
+            self.Bar_list.clear()
+            self.Bar_list.addItems(new_path_list)
+
+            for i in range(self.Bar_list.count()):
+                new_item= self.Bar_list.item(i)
+                new_item.setSizeHint(QSize(0,120))
+                new_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
     
     def hide_side(self):
         if self.showing:
@@ -362,19 +401,36 @@ class Voice_recorder(QMainWindow):
     
     def file_playing(self):
         #so currentItem() brings the hash of the Listwidget box and .text() extracts the text from it
-        self.name= self.Bar_list.currentItem().text()
-        print(self.name)
+        self.the_name= self.Bar_list.currentItem().text()
+        self.name.setText(self.the_name)
 
 
     def play(self, playing):
         if self.name:
             if playing:
                 self.Back_to_beginning.show()
+                self.Pause_button.show()
                 self.record_circle_button.hide()
+
+                self.Play_button.setText('◻')
+                self.Play_button.setStyleSheet(f"""
+                    QPushButton {{
+                        background-color: #FF0000;
+                        color: white;
+                        border: 2px solid black;
+                        border-radius: {self.radius}px;
+                        font-size: 16px;
+                        font-weight: bold;
+                    }} 
+                    QPushButton:hover {{
+                        background-color: #f22952
+                    }}""")
+
+
                 self.player= QMediaPlayer()
                 self.audio_output= QAudioOutput()
                 self.player.setAudioOutput(self.audio_output)
-                self.audio_output.setVolume(1.0)
+                self.audio_output.setVolume(4.0)
                 
                 #__file__ is the current file name and Path() around it turns it into a pathlib object
                 #resolve() it is everything before the current file
@@ -383,28 +439,116 @@ class Voice_recorder(QMainWindow):
 
                 new_audio_folder= new_script_dir / "audio files"
 
-                new_audio_file= new_audio_folder / f"{self.name}.mp3"
+                new_audio_file= new_audio_folder / f"{self.the_name}.mp3"
                 new_source= QUrl.fromLocalFile(new_audio_file.absolute())
 
                 if self.player.source() != new_source:
                     self.player.setSource(new_source)
 
                 self.player.play()
+
+                self.player.mediaStatusChanged.connect(lambda status: self.stoped_playing() if status == QMediaPlayer.MediaStatus.EndOfMedia else None)
             
             else:
-                self.record_circle_button.show()
-                self.Back_to_beginning.hide()
-
-                self.player.stop()
+                #DON'T FORGET PARENTHESES! WITHOUT IT NOTHING WORKS!!!!!!!
+                self.stoped_playing()
+            
         else:
+
             return
     
     def back(self):
         self.player.setPosition(0)
-        self.player.play()
+
+        if not self.false:
+            self.player.play()
+        
+        else:
+            return
     
+    def pause(self):
+        if not self.false:
+            self.player.pause()
+            self.false= True
+            self.Pause_button.setText('▶')
+            self.Pause_button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: #545454;
+                    color: white;
+                    border: 2px solid black;
+                    border-radius: {self.radius}px;
+                    font-size: 16px;
+                    font-weight: bold;
+                }} 
+                QPushButton:hover {{
+                    background-color: #808080
+                }}""")
+        
+        else:
+            self.player.play()
+            self.false= False
+            self.Pause_button.setText('| |')
+            self.Pause_button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: #545454;
+                    color: white;
+                    border: 2px solid black;
+                    font-size: 16px;
+                    font-weight: bold;
+                }} 
+                QPushButton:hover {{
+                    background-color: #808080
+                }}""")
 
 
+    def stoped_playing(self):
+        self.record_circle_button.show()
+        self.Back_to_beginning.hide()
+        self.Pause_button.hide()
+        self.false= False
 
+        self.Play_button.setText('▶')
+        self.Play_button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: #545454;
+                color: white;
+                border: 2px solid black;
+                border-radius: {self.radius}px;
+                font-size: 16px;
+                font-weight: bold;
+            }} 
+            QPushButton:hover {{
+                background-color: #808080
+            }}""")
+
+        self.Pause_button.setText('| |')
+        self.Pause_button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: #545454;
+                color: white;
+                border: 2px solid black;
+                font-size: 16px;
+                font-weight: bold;
+            }} 
+            QPushButton:hover {{
+                background-color: #808080
+            }}""")
+
+        self.player.stop()
+
+    def speed(self):
+        #The problem was that when the button was clicked it would go to the next one and the next one ending me right where I started
+        #So by doing elifs instead of a lot of ifs it made it check until one fits and after it stops checking
+        if self.time_speed.text() == '1x':
+            self.time_speed.setText('2x')
+        
+        elif self.time_speed.text() == '2x':
+            self.time_speed.setText('3x')
+
+        elif self.time_speed.text() == '3x':
+            self.time_speed.setText('4x')
+
+        elif self.time_speed.text() == '4x':
+            self.time_speed.setText('1x')
 
 main()
