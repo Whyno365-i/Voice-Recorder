@@ -5,8 +5,9 @@ from pathlib import Path
 import re
 from PySide6.QtWidgets import (QApplication, QMainWindow, QLabel, QWidget, QWidgetAction, QGridLayout, QVBoxLayout, QListWidgetItem,
 QHBoxLayout, QPushButton, QComboBox, QListWidget, QMenu)
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, QUrl
 from PySide6.QtGui import QFont
+from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 
 def main():
     app = QApplication()
@@ -31,14 +32,15 @@ class Voice_recorder(QMainWindow):
         container_inner_main.setStyleSheet("background-color: transparent; border-radius: 5px;")
         Top= QHBoxLayout(container_inner_main)
 
-        container_side_bar= QWidget()
-        container_side_bar.setStyleSheet("background-color: #353535; border-radius: 5px;")
-        container_side_bar.setFixedWidth(195)
-        side= QVBoxLayout(container_side_bar)
+        self.container_side_bar= QWidget()
+        self.container_side_bar.setStyleSheet("background-color: #353535; border-radius: 5px;")
+        self.container_side_bar.setFixedWidth(195)
+        side= QVBoxLayout(self.container_side_bar)
 
         #start side bar
-        Bar_list= QListWidget()
-        Bar_list.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self.Bar_list= QListWidget()
+        self.Bar_list.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        self.Bar_list.currentTextChanged.connect(self.file_playing)
         path= Path('C:/Users/PC/OneDrive/coding/Coding files/personal/Voice Recorder/audio files')
         path_list=[f.stem for f in path.glob('*.mp3')]
 
@@ -46,16 +48,16 @@ class Voice_recorder(QMainWindow):
             return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', filename)] 
 
         path_list.sort(key= right_order)
-        Bar_list.addItems(path_list)
+        self.Bar_list.addItems(path_list)
 
-        for i in range(Bar_list.count()):
-            item= Bar_list.item(i)
+        for i in range(self.Bar_list.count()):
+            item= self.Bar_list.item(i)
             item.setSizeHint(QSize(0,120))
             item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
 
         
 
-        Bar_list.setStyleSheet(''' 
+        self.Bar_list.setStyleSheet(''' 
             QListWidget{
                 background-color: Transparent;
                 font-family: Arial; 
@@ -74,7 +76,8 @@ class Voice_recorder(QMainWindow):
                 }
 ''')
 
-        side.addWidget(Bar_list)
+        side.addWidget(self.Bar_list)
+        self.showing= True
 
 
         #End Side Bar
@@ -90,6 +93,7 @@ class Voice_recorder(QMainWindow):
 
         #Start Container_inner_top_bar
         open_side= QPushButton('≡')
+        open_side.clicked.connect(self.hide_side)
         open_side.setFixedSize(QSize(40,40))
         open_side.setStyleSheet(''' 
             QPushButton {
@@ -137,7 +141,7 @@ class Voice_recorder(QMainWindow):
         #End Container_main
 
 
-        Top.addWidget(container_side_bar, stretch=1)
+        Top.addWidget(self.container_side_bar, stretch=1)
         Top.addWidget(container_main, stretch=5)
 
         container_bottom_bar= QWidget()
@@ -203,6 +207,8 @@ class Voice_recorder(QMainWindow):
         time.setFont(QFont('Arial', 20))
 
         self.Play_button= QPushButton('▶')
+        self.Play_button.setCheckable(True)
+        self.Play_button.clicked.connect(self.play)
         self.Play_button.setFixedSize(QSize(button_size, button_size))
         self.Play_button.setStyleSheet(f"""
         QPushButton {{
@@ -217,7 +223,9 @@ class Voice_recorder(QMainWindow):
             background-color: #808080
         }}""")
 
+
         self.Back_to_beginning= QPushButton('◀◀')
+        self.Back_to_beginning.clicked.connect(self.back)
         self.Back_to_beginning.setFixedSize(QSize(button_size, button_size))
         self.Back_to_beginning.setStyleSheet(f"""
         QPushButton {{
@@ -259,11 +267,22 @@ class Voice_recorder(QMainWindow):
 
         main_layout.addWidget(container_inner_main, stretch=6)
         main_layout.addWidget(container_bottom_bar, stretch=1)
+        self.Back_to_beginning.hide()
         
         self.sample_rate= 44100
         self.channels= 1
         self.max_duration= 3600
         self.audio_data=None
+
+        #You have to initazile it here so you don't recreate it and you later check if the path is different and update it
+        self.player= QMediaPlayer()
+        self.audio_output= QAudioOutput()
+        self.player.setAudioOutput(self.audio_output)
+        self.audio_output.setVolume(1.0)
+        
+        #__file__ is the current file name and Path() around it turns it into a pathlib object
+        #resolve() it is everything before the current file
+        #parent is adding the current file making it a full abosoulte path
 
     def record(self, checked):
         with open('recording number', 'r') as f:
@@ -331,6 +350,60 @@ class Voice_recorder(QMainWindow):
 
             with open('recording number', 'w') as f:
                 f.write(str(n))
+    
+    def hide_side(self):
+        if self.showing:
+            self.container_side_bar.hide()
+            self.showing=False
+        
+        else:
+            self.container_side_bar.show()
+            self.showing=True
+    
+    def file_playing(self):
+        #so currentItem() brings the hash of the Listwidget box and .text() extracts the text from it
+        self.name= self.Bar_list.currentItem().text()
+        print(self.name)
+
+
+    def play(self, playing):
+        if self.name:
+            if playing:
+                self.Back_to_beginning.show()
+                self.record_circle_button.hide()
+                self.player= QMediaPlayer()
+                self.audio_output= QAudioOutput()
+                self.player.setAudioOutput(self.audio_output)
+                self.audio_output.setVolume(1.0)
+                
+                #__file__ is the current file name and Path() around it turns it into a pathlib object
+                #resolve() it is everything before the current file
+                #parent is adding the current file making it a full abosoulte path
+                new_script_dir= Path(__file__).resolve().parent
+
+                new_audio_folder= new_script_dir / "audio files"
+
+                new_audio_file= new_audio_folder / f"{self.name}.mp3"
+                new_source= QUrl.fromLocalFile(new_audio_file.absolute())
+
+                if self.player.source() != new_source:
+                    self.player.setSource(new_source)
+
+                self.player.play()
+            
+            else:
+                self.record_circle_button.show()
+                self.Back_to_beginning.hide()
+
+                self.player.stop()
+        else:
+            return
+    
+    def back(self):
+        self.player.setPosition(0)
+        self.player.play()
+    
+
 
 
 
