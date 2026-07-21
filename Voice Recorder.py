@@ -5,7 +5,7 @@ from pathlib import Path
 import re
 from PySide6.QtWidgets import (QApplication, QMainWindow, QLabel, QWidget, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton,
                                QComboBox, QListWidget, QMenu)
-from PySide6.QtCore import Qt, QSize, QUrl
+from PySide6.QtCore import Qt, QSize, QUrl, QTimer, QTime
 from PySide6.QtGui import QFont
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 
@@ -25,6 +25,9 @@ class Voice_recorder(QMainWindow):
 
         self.the_name= ''
         self.false= False
+        self.seconds=0
+        self.minutes=0
+        self.hours=0
         
         self.sample_rate= 44100
         self.channels= 1
@@ -221,10 +224,10 @@ class Voice_recorder(QMainWindow):
                 }}""")
         
 
-        time= QLabel('00:00:00/00:00:00')
-        time.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.time= QLabel('00:00:00/00:00:00')
+        self.time.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        time.setFont(QFont('Arial', 20))
+        self.time.setFont(QFont('Arial', 20))
 
         self.Play_button= QPushButton('▶')
         self.Play_button.setCheckable(True)
@@ -294,7 +297,7 @@ class Voice_recorder(QMainWindow):
         bottom.addWidget(mics)
         bottom.addStretch(1)
         bottom.addWidget(self.record_circle_button, alignment=Qt.AlignmentFlag.AlignCenter)
-        bottom.addWidget(time, alignment=Qt.AlignmentFlag.AlignCenter)
+        bottom.addWidget(self.time, alignment=Qt.AlignmentFlag.AlignCenter)
         bottom.addWidget(self.Play_button, alignment= Qt.AlignmentFlag.AlignCenter)
         bottom.addWidget(self.Pause_button, alignment= Qt.AlignmentFlag.AlignCenter)
         bottom.addWidget(self.Back_to_beginning, alignment= Qt.AlignmentFlag.AlignCenter)
@@ -317,6 +320,11 @@ class Voice_recorder(QMainWindow):
             self.Play_button.hide()
             self.Back_to_beginning.hide()
             self.time_speed.hide()
+            self.amount_time= QTimer(self)
+            self.amount_time.timeout.connect(self.clock)
+            self.amount_time.start(1000)
+            self.time.setText(f'{self.hours:02d}:{self.minutes:02d}:{self.seconds:02d}')
+            self.time.setFont(QFont('Arial', 30))        
             self.record_circle_button.setText('| |')
             self.record_circle_button.setStyleSheet('''
                 QPushButton {
@@ -341,6 +349,12 @@ class Voice_recorder(QMainWindow):
             self.Play_button.show()
             self.Back_to_beginning.show()
             self.time_speed.show()
+            self.amount_time.stop()
+            self.time.setText('00:00:00/00:00:00')
+            self.time.setFont(QFont('Arial', 20))
+            self.seconds=0
+            self.minutes=0
+            self.hours=0
             self.record_circle_button.setText('○')
             self.record_circle_button.setStyleSheet(f"""
                 QPushButton {{
@@ -411,7 +425,7 @@ class Voice_recorder(QMainWindow):
                 self.Back_to_beginning.show()
                 self.Pause_button.show()
                 self.record_circle_button.hide()
-
+                self.time_speed.setEnabled(False)
                 self.Play_button.setText('◻')
                 self.Play_button.setStyleSheet(f"""
                     QPushButton {{
@@ -430,7 +444,7 @@ class Voice_recorder(QMainWindow):
                 self.player= QMediaPlayer()
                 self.audio_output= QAudioOutput()
                 self.player.setAudioOutput(self.audio_output)
-                self.audio_output.setVolume(4.0)
+                self.audio_output.setVolume(1.0)
                 
                 #__file__ is the current file name and Path() around it turns it into a pathlib object
                 #resolve() it is everything before the current file
@@ -445,7 +459,34 @@ class Voice_recorder(QMainWindow):
                 if self.player.source() != new_source:
                     self.player.setSource(new_source)
 
+                
+                if self.time_speed.text() == '1x':
+                    self.player.setPlaybackRate(1.0)
+                    self.amount_time_2= QTimer(self)
+                    self.amount_time_2.timeout.connect(self.playing_clock)
+                    self.amount_time_2.start(1000)
+        
+                elif self.time_speed.text() == '2x':
+                    self.player.setPlaybackRate(2.0)
+                    self.amount_time_2= QTimer(self)
+                    self.amount_time_2.timeout.connect(self.playing_clock)
+                    self.amount_time_2.start(500)
+
+                elif self.time_speed.text() == '3x':
+                    self.player.setPlaybackRate(3.0)
+                    self.amount_time_2= QTimer(self)
+                    self.amount_time_2.timeout.connect(self.playing_clock)
+                    self.amount_time_2.start(333)
+
+                elif self.time_speed.text() == '4x':
+                    self.player.setPlaybackRate(4.0)
+                    self.amount_time_2= QTimer(self)
+                    self.amount_time_2.timeout.connect(self.playing_clock)
+                    self.amount_time_2.start(250)
+
                 self.player.play()
+        
+                self.player.durationChanged.connect(self.total_duration)
 
                 self.player.mediaStatusChanged.connect(lambda status: self.stoped_playing() if status == QMediaPlayer.MediaStatus.EndOfMedia else None)
             
@@ -459,6 +500,11 @@ class Voice_recorder(QMainWindow):
     
     def back(self):
         self.player.setPosition(0)
+        self.seconds=0
+        self.minutes=0
+        self.hours=0
+        self.time.setText(f'{self.hours:02d}:{self.minutes:02d}:{self.seconds:02d}/{self.hours_2:02d}:{self.minutes_2:02d}:{self.seconds_2:02d}')
+
 
         if not self.false:
             self.player.play()
@@ -505,7 +551,17 @@ class Voice_recorder(QMainWindow):
         self.record_circle_button.show()
         self.Back_to_beginning.hide()
         self.Pause_button.hide()
+        self.time_speed.setEnabled(True)
         self.false= False
+        self.time.setText('00:00:00/00:00:00')
+        self.amount_time_2.stop()
+        self.seconds=0
+        self.minutes=0
+        self.hours=0
+        self.seconds_2=0
+        self.minutes_2=0
+        self.hours_2=0
+
 
         self.Play_button.setText('▶')
         self.Play_button.setStyleSheet(f"""
@@ -550,5 +606,44 @@ class Voice_recorder(QMainWindow):
 
         elif self.time_speed.text() == '4x':
             self.time_speed.setText('1x')
+
+
+    def clock(self):
+        self.seconds+=1
+
+        if self.seconds == 60:
+            self.seconds= 0
+            self.minutes+=1
+        
+        if self.minutes == 60:
+            self.minutes=0
+            self.hours+=1
+
+        self.time.setText(f'{self.hours:02d}:{self.minutes:02d}:{self.seconds:02d}')
+    
+    def total_duration(self, duration):
+
+        total_seconds= int(duration/1000)
+
+        self.hours_2= total_seconds // 3600
+        self.minutes_2= (total_seconds % 3600) // 60
+        self.seconds_2= total_seconds % 60
+
+        self.time.setText(f'00:00:00/{self.hours_2:02d}:{self.minutes_2:02d}:{self.seconds_2:02d}')
+    
+    def playing_clock(self):
+        self.seconds+=1
+
+        if self.seconds == 60:
+            self.seconds= 0
+            self.minutes+=1
+        
+        if self.minutes == 60:
+            self.minutes=0
+            self.hours+=1
+
+        self.time.setText(f'{self.hours:02d}:{self.minutes:02d}:{self.seconds:02d}/{self.hours_2:02d}:{self.minutes_2:02d}:{self.seconds_2:02d}')
+
+
 
 main()
