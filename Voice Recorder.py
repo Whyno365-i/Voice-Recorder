@@ -16,6 +16,7 @@ def main():
     app.exec()
 
 
+
 class Voice_recorder(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -174,30 +175,38 @@ class Voice_recorder(QMainWindow):
         bottom.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         #start of bottom bar
-        mics= QComboBox()
-        mics.addItems(['one', 'two', 'three', 'four', 'five'])
-        mics.setStyleSheet('''
+        self.mics= QComboBox()
+        self.input= sd.query_devices(kind= 'input')
+        self.input_2= [device['name'] for device in self.input]
+
+        self.mics_dictionary= {}
+
+        for i, device in enumerate(sd.query_devices()):
+            if device['name'] in self.input['name']:
+                self.mics_dictionary[device['index']] = device['name']
+                print(self.mics_dictionary) 
+
+        self.mics.addItems(self.input_2)
+        self.mics.setStyleSheet('''
                 QComboBox {
                     background-color: #545454;  
                     color: #FFFFFF;
                     border: 2px solid #000000;
                     padding-top: 6px;
                     padding-bottom: 6px;
-                    padding-right: 120px;
+                    padding-right: 25px;
                     font-size: 15px;
-                    min-width: 90px;
-                    max-width: 90px
+                    min-width: 120px;
                             }
                 
-                QComboBox:hover, QComboxBox:focus {
+                QComboBox:hover, QComboBox:focus {
                     border: 2px solid #000000;
                     background-color: #808080                           
                             }
                 
                 QComboBox QAbstractItemView {
                     Background-color: #545454;
-                    min-width: 214x;
-                    max-width: 214px    
+                    min-width: 120x;    
                             }
     ''')
 
@@ -294,7 +303,7 @@ class Voice_recorder(QMainWindow):
             background-color: #808080
         }}""")
 
-        bottom.addWidget(mics)
+        bottom.addWidget(self.mics)
         bottom.addStretch(1)
         bottom.addWidget(self.record_circle_button, alignment=Qt.AlignmentFlag.AlignCenter)
         bottom.addWidget(self.time, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -339,9 +348,18 @@ class Voice_recorder(QMainWindow):
                     background-color: #808080;
                     }
 ''')
+            device_index=None
+            microphone= self.mics.currentText
+            for device in self.mics_dictionary.values():
+                if device == microphone:
+                    keys= list(self.mics_dictionary.keys())
+                    values= list(self.mics_dictionary.values())
+                    device_index= keys[values.index(microphone)]
+                    break
+
             print('Recording')
             self.audio_data= sd.rec(int(self.max_duration*self.sample_rate), samplerate=self.sample_rate,
-                                     channels=self.channels, dtype='float32')
+                                     channels=self.channels, dtype='float32', device= device_index)
             
             self.start_time= sd.get_stream().time
 
