@@ -176,17 +176,33 @@ class Voice_recorder(QMainWindow):
 
         #start of bottom bar
         self.mics= QComboBox()
-        self.input= sd.query_devices(kind= 'input')
-        self.input_2= [device['name'] for device in self.input]
 
         self.mics_dictionary= {}
+        devices = sd.query_devices()
+        host_apis = sd.query_hostapis()
+        wasapi_index = None
 
-        for i, device in enumerate(sd.query_devices()):
-            if device['name'] in self.input['name']:
-                self.mics_dictionary[device['index']] = device['name']
-                print(self.mics_dictionary) 
+        #the first for loop looks through all the api's until it finds WASAPI api
+        for index, api in enumerate(host_apis):
+            if "WASAPI" in api['name']:
+                wasapi_index = index
+                break
 
-        self.mics.addItems(self.input_2)
+        #then here it looks throught that api
+        if wasapi_index is not None:    
+            for i, dev in enumerate(devices):
+                if dev['hostapi'] == wasapi_index and dev['max_input_channels'] > 0:
+                    name = dev['name']
+                    
+                    #Adds values
+                    if name not in self.mics_dictionary.values():
+                        self.mics_dictionary[name]= i
+
+
+
+
+        #list is important and you can't just put brackets around it!
+        self.mics.addItems(list(self.mics_dictionary.keys()))
         self.mics.setStyleSheet('''
                 QComboBox {
                     background-color: #545454;  
@@ -197,6 +213,7 @@ class Voice_recorder(QMainWindow):
                     padding-right: 25px;
                     font-size: 15px;
                     min-width: 120px;
+                    max-width: 240px;
                             }
                 
                 QComboBox:hover, QComboBox:focus {
@@ -206,7 +223,8 @@ class Voice_recorder(QMainWindow):
                 
                 QComboBox QAbstractItemView {
                     Background-color: #545454;
-                    min-width: 120x;    
+                    min-width: 120x; 
+                    max-width: 240px;   
                             }
     ''')
 
@@ -332,6 +350,7 @@ class Voice_recorder(QMainWindow):
             self.amount_time= QTimer(self)
             self.amount_time.timeout.connect(self.clock)
             self.amount_time.start(1000)
+            self.mics.setEnabled(False)
             self.time.setText(f'{self.hours:02d}:{self.minutes:02d}:{self.seconds:02d}')
             self.time.setFont(QFont('Arial', 30))        
             self.record_circle_button.setText('| |')
@@ -348,14 +367,11 @@ class Voice_recorder(QMainWindow):
                     background-color: #808080;
                     }
 ''')
-            device_index=None
-            microphone= self.mics.currentText
-            for device in self.mics_dictionary.values():
-                if device == microphone:
-                    keys= list(self.mics_dictionary.keys())
-                    values= list(self.mics_dictionary.values())
-                    device_index= keys[values.index(microphone)]
-                    break
+
+            microphone= self.mics.currentText()
+
+            device_index= self.mics_dictionary.get(microphone, None)
+
 
             print('Recording')
             self.audio_data= sd.rec(int(self.max_duration*self.sample_rate), samplerate=self.sample_rate,
@@ -370,6 +386,7 @@ class Voice_recorder(QMainWindow):
             self.amount_time.stop()
             self.time.setText('00:00:00/00:00:00')
             self.time.setFont(QFont('Arial', 20))
+            self.mics.setEnabled(True)
             self.seconds=0
             self.minutes=0
             self.hours=0
@@ -661,6 +678,8 @@ class Voice_recorder(QMainWindow):
             self.hours+=1
 
         self.time.setText(f'{self.hours:02d}:{self.minutes:02d}:{self.seconds:02d}/{self.hours_2:02d}:{self.minutes_2:02d}:{self.seconds_2:02d}')
+
+
 
 
 
