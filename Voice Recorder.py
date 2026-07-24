@@ -25,12 +25,13 @@ class Voice_recorder(QMainWindow):
         self.setMinimumSize(500, 500)
 
         self.the_name= ''
+        self.showing= True
         self.false= False
         self.seconds=0
         self.minutes=0
         self.hours=0
         
-        self.sample_rate= 44100
+        self.sample_rate= 0
         self.channels= 1
         self.max_duration= 3600
         self.audio_data=None
@@ -65,22 +66,7 @@ class Voice_recorder(QMainWindow):
         self.Bar_list= QListWidget()
         self.Bar_list.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         self.Bar_list.currentTextChanged.connect(self.file_playing)
-        path= Path('C:/Users/PC/OneDrive/coding/Coding files/personal/Voice Recorder/audio files')
-        path_list=[f.stem for f in path.glob('*.mp3')]
-
-        def right_order(filename):
-            return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', filename)] 
-
-        path_list.sort(key= right_order)
-        self.Bar_list.addItems(path_list)
-
-        for i in range(self.Bar_list.count()):
-            item= self.Bar_list.item(i)
-            item.setSizeHint(QSize(0,120))
-            item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-
-        
-
+        self.side_bar_files()
         self.Bar_list.setStyleSheet(''' 
             QListWidget{
                 background-color: Transparent;
@@ -101,9 +87,6 @@ class Voice_recorder(QMainWindow):
     ''')
 
         side.addWidget(self.Bar_list)
-        self.showing= True
-
-
         #End Side Bar
 
         container_main= QWidget()
@@ -176,31 +159,7 @@ class Voice_recorder(QMainWindow):
 
         #start of bottom bar
         self.mics= QComboBox()
-
-        self.mics_dictionary= {}
-        devices = sd.query_devices()
-        host_apis = sd.query_hostapis()
-        wasapi_index = None
-
-        #the first for loop looks through all the api's until it finds WASAPI api
-        for index, api in enumerate(host_apis):
-            if "WASAPI" in api['name']:
-                wasapi_index = index
-                break
-
-        #then here it looks throught that api
-        if wasapi_index is not None:    
-            for i, dev in enumerate(devices):
-                if dev['hostapi'] == wasapi_index and dev['max_input_channels'] > 0:
-                    name = dev['name']
-                    
-                    #Adds values
-                    if name not in self.mics_dictionary.values():
-                        self.mics_dictionary[name]= i
-
-
-
-
+        self.find_mics()
         #list is important and you can't just put brackets around it!
         self.mics.addItems(list(self.mics_dictionary.keys()))
         self.mics.setStyleSheet('''
@@ -216,7 +175,7 @@ class Voice_recorder(QMainWindow):
                     max-width: 240px;
                             }
                 
-                QComboBox:hover, QComboBox:focus {
+                QComboBox:hover {
                     border: 2px solid #000000;
                     background-color: #808080                           
                             }
@@ -340,7 +299,7 @@ class Voice_recorder(QMainWindow):
 
     def record(self, checked):
         with open('recording number', 'r') as f:
-            n= int(f.read().strip())
+            self.n= int(f.read().strip())
 
 
         if checked:
@@ -368,77 +327,19 @@ class Voice_recorder(QMainWindow):
                     }
 ''')
 
-            microphone= self.mics.currentText()
-
-            device_index= self.mics_dictionary.get(microphone, None)
+            self.using_mic()
 
 
             print('Recording')
             self.audio_data= sd.rec(int(self.max_duration*self.sample_rate), samplerate=self.sample_rate,
-                                     channels=self.channels, dtype='float32', device= device_index)
+                                     channels=self.channels, dtype='float32', device= self.device_index)
             
             self.start_time= sd.get_stream().time
 
         else:
-            self.Play_button.show()
-            self.Back_to_beginning.show()
-            self.time_speed.show()
-            self.amount_time.stop()
-            self.time.setText('00:00:00/00:00:00')
-            self.time.setFont(QFont('Arial', 20))
-            self.mics.setEnabled(True)
-            self.seconds=0
-            self.minutes=0
-            self.hours=0
-            self.record_circle_button.setText('○')
-            self.record_circle_button.setStyleSheet(f"""
-                QPushButton {{
-                    background-color: #FF0000;
-                    color: white;
-                    border: 2px solid black;
-                    border-radius: {self.radius}px;
-                    font-size: 16px;
-                    font-weight: bold;
-                }} 
-                QPushButton:hover {{
-                    background-color: #f22952
-                }}""")
+            self.stopped_recording()
 
-            #lets say that sound card (self.start_time) says it's inernal stop watch is 120 secs
-            #then after a couple of minutes bam you stop it and get the current time 124 secs
-            #Then duration gets the difference between the two and 
-            #samples_recorded and audio variable splice it to get rid of the unnessary parts
-            duration= sd.get_stream().time - self.start_time
-            sd.stop()
-            print('finished')
 
-            samples_recorded= int(duration * self.sample_rate)
-            audio= self.audio_data[:samples_recorded] # type: ignore
-
-            ouput_name= f'audio files/recording{n}.mp3'
-            sf.write(ouput_name, audio, self.sample_rate)
-            print('success!')
-
-            n+=1
-
-            with open('recording number', 'w') as f:
-                f.write(str(n))
-            
-            new_path= Path('C:/Users/PC/OneDrive/coding/Coding files/personal/Voice Recorder/audio files')
-            new_path_list=[f.stem for f in new_path.glob('*.mp3')]
-
-            def new_right_order(filename):
-                return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', filename)] 
-
-            new_path_list.sort(key= new_right_order)
-            self.Bar_list.clear()
-            self.Bar_list.addItems(new_path_list)
-
-            for i in range(self.Bar_list.count()):
-                new_item= self.Bar_list.item(i)
-                new_item.setSizeHint(QSize(0,120))
-                new_item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
-    
     def hide_side(self):
         if self.showing:
             self.container_side_bar.hide()
@@ -627,6 +528,58 @@ class Voice_recorder(QMainWindow):
 
         self.player.stop()
 
+
+    def stopped_recording(self):
+            self.Play_button.show()
+            self.Back_to_beginning.show()
+            self.time_speed.show()
+            self.amount_time.stop()
+            self.time.setText('00:00:00/00:00:00')
+            self.time.setFont(QFont('Arial', 20))
+            self.mics.setEnabled(True)
+            self.seconds=0
+            self.minutes=0
+            self.hours=0
+            self.record_circle_button.setText('○')
+            self.record_circle_button.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: #FF0000;
+                    color: white;
+                    border: 2px solid black;
+                    border-radius: {self.radius}px;
+                    font-size: 16px;
+                    font-weight: bold;
+                }} 
+                QPushButton:hover {{
+                    background-color: #f22952
+                }}""")
+
+            #lets say that sound card (self.start_time) says it's inernal stop watch is 120 secs
+            #then after a couple of minutes bam you stop it and get the current time 124 secs
+            #Then duration gets the difference between the two and 
+            #samples_recorded and audio variable splice it to get rid of the unnessary parts
+            duration= sd.get_stream().time - self.start_time
+            sd.stop()
+            print('finished')
+
+            samples_recorded= int(duration * self.sample_rate)
+            audio= self.audio_data[:samples_recorded] # type: ignore
+
+            ouput_name= f'audio files/recording{self.n}.mp3'
+            sf.write(ouput_name, audio, self.sample_rate)
+            print('success!')
+
+            self.n+=1
+
+            with open('recording number', 'w') as f:
+                f.write(str(self.n))
+
+            self.Bar_list.clear()
+            self.side_bar_files()
+
+
+
+
     def speed(self):
         #The problem was that when the button was clicked it would go to the next one and the next one ending me right where I started
         #So by doing elifs instead of a lot of ifs it made it check until one fits and after it stops checking
@@ -655,7 +608,8 @@ class Voice_recorder(QMainWindow):
             self.hours+=1
 
         self.time.setText(f'{self.hours:02d}:{self.minutes:02d}:{self.seconds:02d}')
-    
+
+
     def total_duration(self, duration):
 
         total_seconds= int(duration/1000)
@@ -665,7 +619,8 @@ class Voice_recorder(QMainWindow):
         self.seconds_2= total_seconds % 60
 
         self.time.setText(f'00:00:00/{self.hours_2:02d}:{self.minutes_2:02d}:{self.seconds_2:02d}')
-    
+
+
     def playing_clock(self):
         self.seconds+=1
 
@@ -680,7 +635,53 @@ class Voice_recorder(QMainWindow):
         self.time.setText(f'{self.hours:02d}:{self.minutes:02d}:{self.seconds:02d}/{self.hours_2:02d}:{self.minutes_2:02d}:{self.seconds_2:02d}')
 
 
+    def side_bar_files(self):
+        path= Path('C:/Users/PC/OneDrive/coding/Coding files/personal/Voice Recorder/audio files')
+        path_list=[f.stem for f in path.glob('*.mp3')]
 
+        def right_order(filename):
+            return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', filename)] 
+
+        path_list.sort(key= right_order)
+        self.Bar_list.addItems(path_list)
+
+        for i in range(self.Bar_list.count()):
+            item= self.Bar_list.item(i)
+            item.setSizeHint(QSize(0,120))
+            item.setTextAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+
+
+    def find_mics(self):
+        self.mics_dictionary= {}
+        devices = sd.query_devices()
+        host_apis = sd.query_hostapis()
+        wasapi_index = None
+
+        #the first for loop looks through all the api's until it finds WASAPI api
+        for index, api in enumerate(host_apis):
+            if "WASAPI" in api['name']:
+                wasapi_index = index
+                break
+
+        #then here it looks throught that api
+        if wasapi_index is not None:    
+            for i, dev in enumerate(devices):
+                if dev['hostapi'] == wasapi_index and dev['max_input_channels'] > 0:
+                    name = dev['name']
+                    
+                    #Adds values
+                    if name not in self.mics_dictionary.values():
+                        self.mics_dictionary[name]= dev['index']
+
+
+
+    def using_mic(self):
+        microphone= self.mics.currentText()
+
+        self.device_index= self.mics_dictionary.get(microphone, None)
+
+        self.device_info= sd.query_devices(self.device_index)
+        self.sample_rate= int(self.device_info['default_samplerate'])
 
 
 main()
