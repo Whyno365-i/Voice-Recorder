@@ -2,11 +2,13 @@ import sounddevice as sd
 import soundfile as sf
 import numpy as np
 from pathlib import Path
+import os
+from send2trash import send2trash
 import re
-from PySide6.QtWidgets import (QApplication, QMainWindow, QLabel, QWidget, QGridLayout, QVBoxLayout, QHBoxLayout, QPushButton,
-                               QComboBox, QListWidget, QMenu)
-from PySide6.QtCore import Qt, QSize, QUrl, QTimer, QTime
-from PySide6.QtGui import QFont
+from PySide6.QtWidgets import (QApplication, QMainWindow, QLabel, QWidget, QGridLayout, QLineEdit, QVBoxLayout, QHBoxLayout, QPushButton,
+                               QComboBox, QListWidget, QMenu, QDialog, QListView)
+from PySide6.QtCore import Qt, QSize, QUrl, QTimer
+from PySide6.QtGui import QFont, QAction
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 
 def main():
@@ -116,19 +118,57 @@ class Voice_recorder(QMainWindow):
         self.name= QLabel(f'{self.the_name}')
         self.name.setFont(QFont('Arial', 20))
 
-        three_dots= QPushButton('...')
+        three_dots= QPushButton('···')
         three_dots.setFixedSize(QSize(40,40))
         three_dots.setStyleSheet('''
             QPushButton {
                 background: Transparent;
-                font: 30px;
-                padding-bottom: 15px;                 
+                font: bold 30px;            
                 }
             
             QPushButton:hover {
-                background-color: #808080
+                background-color: #808080;
                 }
+            
+            QPushButton::menu-indicator {
+                image: none;
+                width: 0px;
+            }
     ''')
+
+        dropdown= QMenu(self)
+
+        dropdown.setStyleSheet('''
+            QMenu::item {
+                font-size: 20px;
+                border-radius: 5px;
+                padding-right: 30px;
+                padding-top: 5px;
+                padding-bottom: 5px;
+            }
+
+            QMenu::item:selected {
+                background-color: #808080;
+            }
+
+''')
+
+        rename= QAction('Rename', self)
+        show_folder= QAction('Show in Folder', self)
+        delete= QAction('Delete', self) 
+        refresh= QAction('Refresh Files', self)
+
+        rename.triggered.connect(self.rename_file)
+        show_folder.triggered.connect(self.open_folder)
+        delete.triggered.connect(self.delete_file)
+        refresh.triggered.connect(lambda: (self.Bar_list.clear(), self.side_bar_files()))
+
+        dropdown.addAction(rename)
+        dropdown.addAction(show_folder)
+        dropdown.addAction(delete)
+        dropdown.addAction(refresh)
+
+        three_dots.setMenu(dropdown)
 
 
         inner_top_bar.addWidget(open_side)
@@ -177,14 +217,18 @@ class Voice_recorder(QMainWindow):
                 
                 QComboBox:hover {
                     border: 2px solid #000000;
-                    background-color: #808080                           
+                    background-color: #808080;                           
                             }
                 
                 QComboBox QAbstractItemView {
                     Background-color: #545454;
                     min-width: 120x; 
-                    max-width: 240px;   
+                    max-width: 280px;   
                             }
+                
+                QCombox QAbstractItemView::item {
+                    padding-right: 5000px;
+                }
     ''')
 
 
@@ -636,8 +680,9 @@ class Voice_recorder(QMainWindow):
 
 
     def side_bar_files(self):
-        path= Path('C:/Users/PC/OneDrive/coding/Coding files/personal/Voice Recorder/audio files')
-        path_list=[f.stem for f in path.glob('*.mp3')]
+        before_path= Path(__file__).resolve().parent
+        self.path= before_path / 'audio files'
+        path_list=[f.stem for f in self.path.glob('*.mp3')]
 
         def right_order(filename):
             return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', filename)] 
@@ -682,6 +727,65 @@ class Voice_recorder(QMainWindow):
 
         self.device_info= sd.query_devices(self.device_index)
         self.sample_rate= int(self.device_info['default_samplerate'])
+
+
+    def open_folder(self):
+        os.startfile(self.path)
+
+    def delete_file(self):
+        send2trash(os.path.join(self.path, f'{self.the_name}.mp3'))
+        self.Bar_list.clear()
+        self.side_bar_files()
+
+
+    def rename_file(self):
+        class rename_box(QDialog):
+            def __init__(self, parent=None):
+                super().__init__(parent)
+                self.setWindowTitle('Rename')
+                self.setFixedSize(QSize(150, 100))
+
+                layout= QGridLayout()
+
+                self.text= QLineEdit()
+                self.text.setPlaceholderText('Rename')
+                self.text.setStyleSheet('''
+                    QLineEdit {
+                        font: 20px;
+                    }
+''')
+
+                ok= QPushButton('ok')
+                ok.clicked.connect(self.accept)
+
+
+                
+                layout.addWidget(self.text, 1, 1)
+                layout.addWidget(ok, 2, 1)
+                self.setLayout(layout)
+
+
+            def get_text(self):
+                #This function return the text in self.text
+                return self.text.text()
+
+
+        box= rename_box()
+
+        #the if statement runs the Qdailog box and then when ok is clicked it gets the text from the box using
+        #The get_text function
+        if box.exec() == QDialog.Accepted: # type: ignore
+            self.new_name= box.get_text()
+
+            if self.new_name == '' or r'<>:"/\|?*' in self.new_name:
+                return
+            
+            else:
+                old_path= os.path.join(self.path, f'{self.the_name}.mp3')
+                new_path= os.path.join(self.path, f'{self.new_name}.mp3')
+                os.rename(old_path, new_path)
+                self.Bar_list.clear()
+                self.side_bar_files()
 
 
 main()
