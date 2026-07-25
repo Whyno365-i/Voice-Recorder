@@ -4,9 +4,10 @@ import numpy as np
 from pathlib import Path
 import os
 from send2trash import send2trash
+from mutagen.mp3 import MP3 
 import re
 from PySide6.QtWidgets import (QApplication, QMainWindow, QLabel, QWidget, QGridLayout, QLineEdit, QVBoxLayout, QHBoxLayout, QPushButton,
-                               QComboBox, QListWidget, QMenu, QDialog, QListView)
+                               QComboBox, QListWidget, QMenu, QDialog, QSlider)
 from PySide6.QtCore import Qt, QSize, QUrl, QTimer
 from PySide6.QtGui import QFont, QAction
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
@@ -92,12 +93,12 @@ class Voice_recorder(QMainWindow):
         #End Side Bar
 
         container_main= QWidget()
-        container_main.setStyleSheet("background-color: #800080; border-radius: 5px;")
+        container_main.setStyleSheet("background-color: Transparent; border-radius: 5px;")
         Top_inner= QVBoxLayout(container_main)
 
         #Start Container_main
         container_inner_top_bar= QWidget()
-        container_inner_top_bar.setStyleSheet("background-color: #013220; border-radius: 5px;")
+        container_inner_top_bar.setStyleSheet("background-color: #353535; border-radius: 5px;")
         inner_top_bar= QHBoxLayout(container_inner_top_bar)
 
         #Start Container_inner_top_bar
@@ -181,6 +182,16 @@ class Voice_recorder(QMainWindow):
 
         container_inner_bottom_main= QWidget()
         container_inner_bottom_main.setStyleSheet("background-color: #39FF14; border-radius: 5px;")
+        self.audio_place= QVBoxLayout(container_inner_bottom_main)
+
+        #Start container_inner_bottom_main
+
+
+
+
+
+        #End container_inner_bottom_main
+
         Top_inner.addWidget(container_inner_top_bar, stretch=1)
         Top_inner.addWidget(container_inner_bottom_main, stretch=13)
 
@@ -225,10 +236,6 @@ class Voice_recorder(QMainWindow):
                     min-width: 120x; 
                     max-width: 280px;   
                             }
-                
-                QCombox QAbstractItemView::item {
-                    padding-right: 5000px;
-                }
     ''')
 
 
@@ -398,6 +405,21 @@ class Voice_recorder(QMainWindow):
         self.the_name= self.Bar_list.currentItem().text()
         self.name.setText(self.the_name)
 
+        audio_file= MP3(os.path.join(self.path, f'{self.the_name}.mp3'))
+
+        duration= audio_file.info.length
+
+        #TODO The time slider
+        #TODO Timestamp buttons at 10%, 20%, 30%...
+        #TODO Fix the clock with the slider
+        #TODO make so that where ever the slider is at is where the audio recording starts playing at
+        self.slider= QSlider(Qt.Orientation.Horizontal)
+
+        self.audio_place.addWidget(self.slider)
+
+        self.slider.setMaximum(duration)
+
+        
 
     def play(self, playing):
         if self.name:
@@ -464,9 +486,15 @@ class Voice_recorder(QMainWindow):
                     self.amount_time_2.timeout.connect(self.playing_clock)
                     self.amount_time_2.start(250)
 
+                self.slider= QSlider(Qt.Orientation.Horizontal)
+
+                self.audio_place.addWidget(self.slider)
+
                 self.player.play()
-        
+
                 self.player.durationChanged.connect(self.total_duration)
+                self.player.positionChanged.connect(self.slider.setValue)
+                self.slider.sliderMoved.connect(self.player.setPosition)
 
                 self.player.mediaStatusChanged.connect(lambda status: self.stoped_playing() if status == QMediaPlayer.MediaStatus.EndOfMedia else None)
             
