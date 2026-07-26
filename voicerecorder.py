@@ -45,9 +45,6 @@ class Voice_recorder(QMainWindow):
         self.player.setAudioOutput(self.audio_output)
         self.audio_output.setVolume(1.0)
         
-        #__file__ is the current file name and Path() around it turns it into a pathlib object
-        #resolve() it is everything before the current file
-        #parent is adding the current file making it a full abosoulte path
         self.main_app()
     
     def main_app(self):
@@ -349,9 +346,14 @@ class Voice_recorder(QMainWindow):
         self.Back_to_beginning.hide()
 
     def record(self, checked):
-        with open('recording number', 'r') as f:
-            self.n= int(f.read().strip())
-
+        self.n = max(
+            (
+                int(n) + 1
+                for f in self.audio_files_dir.glob("recording*.mp3")
+                if (n := f.stem.removeprefix("recording")).isdigit()
+            ),
+            default=0,
+        )
 
         if checked:
             self.Play_button.hide()
@@ -400,12 +402,21 @@ class Voice_recorder(QMainWindow):
             self.container_side_bar.show()
             self.is_showing=True
     
+
+    @property
+    def audio_files_dir(self):
+        #__file__ is the current file name and Path() around it turns it into a pathlib object
+        #resolve() it is everything before the current file
+        #parent is adding the current file making it a full abosoulte path
+        return Path(__file__).resolve().parent / "audio files"
+
+
     def file_playing(self):
         #so currentItem() brings the hash of the Listwidget box and .text() extracts the text from it
         self.mp3_basename= self.Bar_list.currentItem().text()
         self.name.setText(self.mp3_basename)
 
-        audio_file= MP3(os.path.join(self.path, f'{self.mp3_basename}.mp3'))
+        audio_file= MP3(str(self.audio_files_dir / f'{self.mp3_basename}.mp3'))
 
         duration= audio_file.info.length
 
@@ -448,14 +459,7 @@ class Voice_recorder(QMainWindow):
                 self.player.setAudioOutput(self.audio_output)
                 self.audio_output.setVolume(1.0)
                 
-                #__file__ is the current file name and Path() around it turns it into a pathlib object
-                #resolve() it is everything before the current file
-                #parent is adding the current file making it a full abosoulte path
-                new_script_dir= Path(__file__).resolve().parent
-
-                new_audio_folder= new_script_dir / "audio files"
-
-                new_audio_file= new_audio_folder / f"{self.mp3_basename}.mp3"
+                new_audio_file= self.audio_files_dir / f"{self.mp3_basename}.mp3"
                 new_source= QUrl.fromLocalFile(new_audio_file.absolute())
 
                 if self.player.source() != new_source:
@@ -636,15 +640,19 @@ class Voice_recorder(QMainWindow):
 
             samples_recorded= int(duration * self.sample_rate)
             audio= self.audio_data[:samples_recorded] # type: ignore
-
-            ouput_name= f'audio files/recording{self.n}.mp3'
-            sf.write(ouput_name, audio, self.sample_rate)
+            
+            # create audio files directory if it does not already exist
+            self.audio_files_dir.mkdir(exist_ok=True)
+            
+            # increment count until you hit an output path that does not already exist
+            # the walrus operator ':=' assigns 'output_path' to the new Path object each iteration
+            while (output_path := self.audio_files_dir / f'recording{self.n}.mp3').exists():
+                self.n += 1
+            
+            sf.write(output_path, audio, self.sample_rate)
             print('success!')
 
             self.n+=1
-
-            with open('recording number', 'w') as f:
-                f.write(str(self.n))
 
             self.Bar_list.clear()
             self.side_bar_files()
@@ -708,14 +716,13 @@ class Voice_recorder(QMainWindow):
 
 
     def side_bar_files(self):
-        before_path= Path(__file__).resolve().parent
-        self.path= before_path / 'audio files'
-        path_list=[f.stem for f in self.path.glob('*.mp3')]
-
-        def right_order(filename):
-            return [int(text) if text.isdigit() else text.lower() for text in re.split(r'(\d+)', filename)] 
-
-        path_list.sort(key= right_order)
+        path_list=sorted(
+            (f.stem for f in self.audio_files_dir.glob("*.mp3")),
+            key=lambda fname: (
+                int(fname.removeprefix("recording")) if fname.startswith("recording") else -1,
+                fname.lower(),
+            ),
+        )
         self.Bar_list.addItems(path_list)
 
         for i in range(self.Bar_list.count()):
@@ -752,10 +759,10 @@ class Voice_recorder(QMainWindow):
 
 
     def open_folder(self):
-        os.startfile(self.path)
+        os.startfile(self.audio_files_dir)
 
     def delete_file(self):
-        send2trash(os.path.join(self.path, f'{self.mp3_basename}.mp3'))
+        send2trash(str(self.audio_files_dir / f'{self.mp3_basename}.mp3'))
         self.Bar_list.clear()
         self.side_bar_files()
 
@@ -803,9 +810,9 @@ class Voice_recorder(QMainWindow):
                 return
             
             else:
-                old_path= os.path.join(self.path, f'{self.mp3_basename}.mp3')
-                new_path= os.path.join(self.path, f'{self.new_name}.mp3')
-                os.rename(old_path, new_path)
+                old_path= self.audio_files_dir / f'{self.mp3_basename}.mp3'
+                new_path= self.audio_files_dir / f'{self.new_name}.mp3'
+                os.rename(str(old_path), str(new_path))
                 self.Bar_list.clear()
                 self.side_bar_files()
 
