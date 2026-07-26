@@ -810,4 +810,5 @@ class Voice_recorder(QMainWindow):
                 self.side_bar_files()
 
 
-main()
+if __name__ == "__main__":
+    main()
