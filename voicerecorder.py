@@ -496,11 +496,11 @@ class Voice_recorder(QMainWindow):
                 self.player.positionChanged.connect(self.slider.setValue)
                 self.slider.sliderMoved.connect(self.player.setPosition)
 
-                self.player.mediaStatusChanged.connect(lambda status: self.stoped_playing() if status == QMediaPlayer.MediaStatus.EndOfMedia else None)
+                self.player.mediaStatusChanged.connect(lambda status: self.stopped_playing() if status == QMediaPlayer.MediaStatus.EndOfMedia else None)
             
             else:
                 #DON'T FORGET PARENTHESES! WITHOUT IT NOTHING WORKS!!!!!!!
-                self.stoped_playing()
+                self.stopped_playing()
             
         else:
 
@@ -555,7 +555,7 @@ class Voice_recorder(QMainWindow):
                 }}""")
 
 
-    def stoped_playing(self):
+    def stopped_playing(self):
         self.record_circle_button.show()
         self.Back_to_beginning.hide()
         self.Pause_button.hide()
