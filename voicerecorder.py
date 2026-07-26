@@ -716,12 +716,17 @@ class Voice_recorder(QMainWindow):
 
 
     def side_bar_files(self):
+        def sort_fname(fname):
+            idx = -1
+            if fname.startswith("recording"):
+                suffix = fname.removeprefix("recording")
+                if suffix.isdigit():
+                    idx = int(suffix)
+            return idx, fname.lower()
+
         path_list=sorted(
             (f.stem for f in self.audio_files_dir.glob("*.mp3")),
-            key=lambda fname: (
-                int(fname.removeprefix("recording")) if fname.startswith("recording") else -1,
-                fname.lower(),
-            ),
+            key=sort_fname,
         )
         self.Bar_list.addItems(path_list)
 
