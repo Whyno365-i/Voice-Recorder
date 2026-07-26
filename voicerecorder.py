@@ -739,12 +739,13 @@ class Voice_recorder(QMainWindow):
     def find_mics(self):
         if not hasattr(self, "mics_dictionary"):
             self.mics_dictionary= {}
-        devices = sd.query_devices()
-        host_apis = sd.query_hostapis()
-        wasapi = next((api for api in host_apis if "WASAPI" in api["name"]), None)
+        else:
+            self.mics_dictionary.clear()
+        wasapi = next((api for api in sd.query_hostapis() if "WASAPI" in api["name"]), None)
         if wasapi is None:
             return
 
+        devices = sd.query_devices()
         # use 'devices' list of indices in wasapi dict
         for idx in wasapi["devices"]:
             dev = devices[idx]
