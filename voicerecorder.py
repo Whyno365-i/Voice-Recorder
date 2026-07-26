@@ -27,9 +27,9 @@ class Voice_recorder(QMainWindow):
         self.resize(1100, 700)
         self.setMinimumSize(500, 500)
 
-        self.the_name= ''
-        self.showing= True
-        self.false= False
+        self.mp3_basename= ''
+        self.is_showing= True
+        self.is_paused= False
         self.seconds=0
         self.minutes=0
         self.hours=0
@@ -116,7 +116,7 @@ class Voice_recorder(QMainWindow):
                 background-color: #808080
                 }
     ''')
-        self.name= QLabel(f'{self.the_name}')
+        self.name= QLabel(f'{self.mp3_basename}')
         self.name.setFont(QFont('Arial', 20))
 
         three_dots= QPushButton('···')
@@ -392,20 +392,20 @@ class Voice_recorder(QMainWindow):
 
 
     def hide_side(self):
-        if self.showing:
+        if self.is_showing:
             self.container_side_bar.hide()
-            self.showing=False
+            self.is_showing=False
         
         else:
             self.container_side_bar.show()
-            self.showing=True
+            self.is_showing=True
     
     def file_playing(self):
         #so currentItem() brings the hash of the Listwidget box and .text() extracts the text from it
-        self.the_name= self.Bar_list.currentItem().text()
-        self.name.setText(self.the_name)
+        self.mp3_basename= self.Bar_list.currentItem().text()
+        self.name.setText(self.mp3_basename)
 
-        audio_file= MP3(os.path.join(self.path, f'{self.the_name}.mp3'))
+        audio_file= MP3(os.path.join(self.path, f'{self.mp3_basename}.mp3'))
 
         duration= audio_file.info.length
 
@@ -455,7 +455,7 @@ class Voice_recorder(QMainWindow):
 
                 new_audio_folder= new_script_dir / "audio files"
 
-                new_audio_file= new_audio_folder / f"{self.the_name}.mp3"
+                new_audio_file= new_audio_folder / f"{self.mp3_basename}.mp3"
                 new_source= QUrl.fromLocalFile(new_audio_file.absolute())
 
                 if self.player.source() != new_source:
@@ -514,16 +514,16 @@ class Voice_recorder(QMainWindow):
         self.time.setText(f'{self.hours:02d}:{self.minutes:02d}:{self.seconds:02d}/{self.hours_2:02d}:{self.minutes_2:02d}:{self.seconds_2:02d}')
 
 
-        if not self.false:
+        if not self.is_paused:
             self.player.play()
         
         else:
             return
     
     def pause(self):
-        if not self.false:
+        if not self.is_paused:
             self.player.pause()
-            self.false= True
+            self.is_paused= True
             self.Pause_button.setText('▶')
             self.Pause_button.setStyleSheet(f"""
                 QPushButton {{
@@ -540,7 +540,7 @@ class Voice_recorder(QMainWindow):
         
         else:
             self.player.play()
-            self.false= False
+            self.is_paused= False
             self.Pause_button.setText('| |')
             self.Pause_button.setStyleSheet(f"""
                 QPushButton {{
@@ -560,7 +560,7 @@ class Voice_recorder(QMainWindow):
         self.Back_to_beginning.hide()
         self.Pause_button.hide()
         self.time_speed.setEnabled(True)
-        self.false= False
+        self.is_paused= False
         self.time.setText('00:00:00/00:00:00')
         self.amount_time_2.stop()
         self.seconds=0
@@ -755,7 +755,7 @@ class Voice_recorder(QMainWindow):
         os.startfile(self.path)
 
     def delete_file(self):
-        send2trash(os.path.join(self.path, f'{self.the_name}.mp3'))
+        send2trash(os.path.join(self.path, f'{self.mp3_basename}.mp3'))
         self.Bar_list.clear()
         self.side_bar_files()
 
@@ -803,7 +803,7 @@ class Voice_recorder(QMainWindow):
                 return
             
             else:
-                old_path= os.path.join(self.path, f'{self.the_name}.mp3')
+                old_path= os.path.join(self.path, f'{self.mp3_basename}.mp3')
                 new_path= os.path.join(self.path, f'{self.new_name}.mp3')
                 os.rename(old_path, new_path)
                 self.Bar_list.clear()
