@@ -346,6 +346,7 @@ class Voice_recorder(QMainWindow):
         self.Back_to_beginning.hide()
 
     def record(self, checked):
+        #TODO Figure out how this works
         self.n = max(
             (
                 int(n) + 1
@@ -402,7 +403,7 @@ class Voice_recorder(QMainWindow):
             self.container_side_bar.show()
             self.is_showing=True
     
-
+    #TODO figure out how this works
     @property
     def audio_files_dir(self):
         #__file__ is the current file name and Path() around it turns it into a pathlib object
@@ -474,7 +475,8 @@ class Voice_recorder(QMainWindow):
                 self.slider.sliderReleased.connect(self.slider_released)
                 #This line below makes it so that when the slider is moved it updates the position but only when the user is clicking on it
                 self.slider.sliderMoved.connect(self.player.setPosition)
-                
+
+                #TODO figure out how this works
                 new_audio_file= self.audio_files_dir / f"{self.mp3_basename}.mp3"
                 new_source= QUrl.fromLocalFile(new_audio_file.absolute())
 
@@ -748,6 +750,7 @@ class Voice_recorder(QMainWindow):
 
 
     def find_mics(self):
+        #TODO figure out this works
         if not hasattr(self, "mics_dictionary"):
             self.mics_dictionary= {}
         else:
@@ -779,7 +782,7 @@ class Voice_recorder(QMainWindow):
         os.startfile(self.audio_files_dir)
 
     def delete_file(self):
-        send2trash(str(self.audio_files_dir / f'{self.mp3_basename}.mp3'))
+        send2trash(os.path.join(self.audio_files_dir / f'{self.mp3_basename}.mp3'))
         self.Bar_list.clear()
         self.side_bar_files()
 
