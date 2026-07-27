@@ -1,0 +1,6 @@
+PySide6
+Send2Trash
+mutagen
+numpy
+sounddevice
+soundfile
