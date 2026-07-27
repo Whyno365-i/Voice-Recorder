@@ -409,15 +409,27 @@ class Voice_recorder(QMainWindow):
 
         duration= audio_file.info.length
 
-        #TODO The time slider
-        #TODO Timestamp buttons at 10%, 20%, 30%...
         #TODO Fix the clock with the slider
-        #TODO make so that where ever the slider is at is where the audio recording starts playing at
-        self.slider= QSlider(Qt.Orientation.Horizontal)
+        #TODO Timestamp buttons at 10%, 20%, 30%...
+
+        try:
+            self.slider.deleteLater()
+            n= 0
+        except RuntimeError:
+            self.slider= QSlider(Qt.Orientation.Horizontal)
+            n=1
+        except AttributeError:
+            self.slider= QSlider(Qt.Orientation.Horizontal)
+            n=1
+
+        if n == 0:
+            self.slider= QSlider(Qt.Orientation.Horizontal)
 
         self.audio_place.addWidget(self.slider)
 
-        self.slider.setMaximum(duration)
+        #The code interperts the time in miliseconds but you were giving it seconds
+        #So multiplying it by 1000 fixes that
+        self.slider.setMaximum(int(duration) * 1000)
 
         
 
@@ -442,11 +454,15 @@ class Voice_recorder(QMainWindow):
                         background-color: #f22952
                     }}""")
 
-
-                self.player= QMediaPlayer()
-                self.audio_output= QAudioOutput()
-                self.player.setAudioOutput(self.audio_output)
-                self.audio_output.setVolume(1.0)
+                #the line below says that when the player positions change run the update_slider method
+                #This method updates the slider
+                self.player.positionChanged.connect(self.update_slider)
+                #the line below says when the slider is pressed run the slider_pressed method. More information in the method
+                self.slider.sliderPressed.connect(self.slider_pressed)
+                #the line below says when the slider is released run the slider_released method. More information in the method
+                self.slider.sliderReleased.connect(self.slider_released)
+                #This line below makes it so that when the slider is moved it updates the position but only when the user is clicking on it
+                self.slider.sliderMoved.connect(self.player.setPosition)
                 
                 #__file__ is the current file name and Path() around it turns it into a pathlib object
                 #resolve() it is everything before the current file
@@ -486,15 +502,10 @@ class Voice_recorder(QMainWindow):
                     self.amount_time_2.timeout.connect(self.playing_clock)
                     self.amount_time_2.start(250)
 
-                self.slider= QSlider(Qt.Orientation.Horizontal)
-
-                self.audio_place.addWidget(self.slider)
+                self.player.durationChanged.connect(self.total_duration)
 
                 self.player.play()
 
-                self.player.durationChanged.connect(self.total_duration)
-                self.player.positionChanged.connect(self.slider.setValue)
-                self.slider.sliderMoved.connect(self.player.setPosition)
 
                 self.player.mediaStatusChanged.connect(lambda status: self.stoped_playing() if status == QMediaPlayer.MediaStatus.EndOfMedia else None)
             
@@ -814,6 +825,24 @@ class Voice_recorder(QMainWindow):
                 os.rename(old_path, new_path)
                 self.Bar_list.clear()
                 self.side_bar_files()
+
+
+    def update_slider(self, position):
+        #Self.slider.isSliderDown() checks if the slider is being held or dragged and returns a bool
+        #So the if statment says that not holding the slider or dragged it updates the position
+        if not self.slider.isSliderDown():
+            self.slider.setValue(position)
+
+    def slider_pressed(self):
+        #If the slider is pressed it stops the audio
+        self.player.positionChanged.disconnect(self.update_slider)
+
+    def slider_released(self):
+        #It makes it so the slider starts updating again and audio
+        self.player.positionChanged.connect(self.update_slider)
+        #This updates the player to the new position
+        self.player.setPosition(self.slider.value())
+
 
 
 main()
