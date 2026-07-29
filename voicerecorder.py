@@ -346,14 +346,17 @@ class Voice_recorder(QMainWindow):
         self.Back_to_beginning.hide()
 
     def record(self, checked):
-        #TODO Figure out how this works
+        #So basically it calls the attribute self.audio_file_dir.
         self.n = max(
             (
                 int(n) + 1
+                #The for loop checks through all the files in the audio files folder. Check the self.audio_files attribute and you'll understand
                 for f in self.audio_files_dir.glob("recording*.mp3")
+                #This removes the prefix recording leaving you the number.
                 if (n := f.stem.removeprefix("recording")).isdigit()
             ),
-            default=0,
+            #This is a fall back incase there is no files with recording prefix.
+            default=1,
         )
 
         if checked:
@@ -403,7 +406,7 @@ class Voice_recorder(QMainWindow):
             self.container_side_bar.show()
             self.is_showing=True
     
-    #TODO figure out how this works
+    #The @property makes the function an attribute making it easier to compute. (saves computing power)
     @property
     def audio_files_dir(self):
         #__file__ is the current file name and Path() around it turns it into a pathlib object
@@ -419,9 +422,11 @@ class Voice_recorder(QMainWindow):
 
         audio_file= MP3(str(self.audio_files_dir / f'{self.mp3_basename}.mp3'))
 
-        duration= audio_file.info.length
+        self.duration= audio_file.info.length
 
-        #TODO Fix the clock with the slider
+        self.total_duration(int(self.duration)*1000)
+
+        #TODO Make line for slider
         #TODO Timestamp buttons at 10%, 20%, 30%...
 
         try:
@@ -441,9 +446,8 @@ class Voice_recorder(QMainWindow):
 
         #The code interperts the time in miliseconds but you were giving it seconds
         #So multiplying it by 1000 fixes that
-        self.slider.setMaximum(int(duration) * 1000)
+        self.slider.setMaximum(int(self.duration) * 1000)
 
-        
 
     def play(self, playing):
         if self.name:
@@ -476,10 +480,12 @@ class Voice_recorder(QMainWindow):
                 #This line below makes it so that when the slider is moved it updates the position but only when the user is clicking on it
                 self.slider.sliderMoved.connect(self.player.setPosition)
 
-                #TODO figure out how this works
+                #The following line gets the path to the file using the attribute audio_files_dir and adding the file_name.mp3
                 new_audio_file= self.audio_files_dir / f"{self.mp3_basename}.mp3"
+                #This makes it an absolute path not a relative path
                 new_source= QUrl.fromLocalFile(new_audio_file.absolute())
 
+                #Uses the variable above to check if it's the same or new to see if it should over write the varaible
                 if self.player.source() != new_source:
                     self.player.setSource(new_source)
 
@@ -579,6 +585,7 @@ class Voice_recorder(QMainWindow):
         self.time_speed.setEnabled(True)
         self.is_paused= False
         self.time.setText('00:00:00/00:00:00')
+        self.total_duration(int(self.duration)*1000)
         self.amount_time_2.stop()
         self.seconds=0
         self.minutes=0
@@ -750,7 +757,10 @@ class Voice_recorder(QMainWindow):
 
 
     def find_mics(self):
-        #TODO figure out this works
+        #The following if statment checks if the variable mics_dictionary.
+        #If it doesn't exist than it creates the variable mics_dictionary
+        #Otherwise it clears the dictionary.
+        #This preserves the identity of the variable and is easier to compute
         if not hasattr(self, "mics_dictionary"):
             self.mics_dictionary= {}
         else:
@@ -846,14 +856,26 @@ class Voice_recorder(QMainWindow):
     def slider_pressed(self):
         #If the slider is pressed it stops the audio
         self.player.positionChanged.disconnect(self.update_slider)
+        self.amount_time_2.timeout.disconnect(self.playing_clock)
+        self.slider.sliderMoved.connect(self.update_time)
 
     def slider_released(self):
+        self.update_time()
         #It makes it so the slider starts updating again and audio
         self.player.positionChanged.connect(self.update_slider)
+        self.amount_time_2.timeout.connect(self.playing_clock)
         #This updates the player to the new position
         self.player.setPosition(self.slider.value())
 
+    def update_time(self):
+        value= str(int(self.slider.value()) // 1000)
+        add_zeros= int(7- len(value))
+        time_2= f'{int(value):0{add_zeros}d}'
+        self.hours= int(time_2[0:2])
+        self.minutes= int(time_2[2:3])
+        self.seconds= int(time_2[3:6])
 
+        self.time.setText(f'{self.hours:02d}:{self.minutes:02d}:{self.seconds:02d}/{self.hours_2:02d}:{self.minutes_2:02d}:{self.seconds_2:02d}')
 
 if __name__ == "__main__":
     main()
