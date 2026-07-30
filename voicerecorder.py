@@ -33,6 +33,8 @@ class Voice_recorder(QMainWindow):
         self.seconds=0
         self.minutes=0
         self.hours=0
+        self.one_time= True
+
         
         self.sample_rate= 0
         self.channels= 1
@@ -178,7 +180,7 @@ class Voice_recorder(QMainWindow):
         #End Container_inner_top_bar
 
         container_inner_bottom_main= QWidget()
-        container_inner_bottom_main.setStyleSheet("background-color: #39FF14; border-radius: 5px;")
+        container_inner_bottom_main.setStyleSheet("background-color: #353535; border-radius: 5px;")
         self.audio_place= QVBoxLayout(container_inner_bottom_main)
 
         #Start container_inner_bottom_main
@@ -426,7 +428,7 @@ class Voice_recorder(QMainWindow):
 
         self.total_duration(int(self.duration)*1000)
 
-        #TODO Make line for slider
+        #TODO fix pause button
         #TODO Timestamp buttons at 10%, 20%, 30%...
 
         try:
@@ -447,6 +449,35 @@ class Voice_recorder(QMainWindow):
         #The code interperts the time in miliseconds but you were giving it seconds
         #So multiplying it by 1000 fixes that
         self.slider.setMaximum(int(self.duration) * 1000)
+
+        self.slider.setMinimumHeight(410)
+        self.slider.setMaximumHeight(410)
+        self.slider.setStyleSheet('''
+            QSlider::groove:horizontal {
+                border: 1px solid #545454;
+                height: 8px;
+                background: #545454;
+                border-radius: 2px; 
+            }
+        
+
+            QSlider::handle:horizontal {
+                background: #FFFFFF;
+                border:2px solid #000000;
+                width: 6px;
+                height: 390px;
+                margin: -196px 0px;
+                border-radius: 2px; 
+            }
+
+''')
+
+        self.slider.sliderPressed.connect(self.slider_pressed_2)
+        #the line below says when the slider is released run the slider_released method. More information in the method
+        self.slider.sliderReleased.connect(self.slider_released_2)
+        #This line below makes it so that when the slider is moved it updates the position but only when the user is clicking on it
+        self.slider.sliderMoved.connect(self.before_player)
+
 
 
     def play(self, playing):
@@ -479,6 +510,8 @@ class Voice_recorder(QMainWindow):
                 self.slider.sliderReleased.connect(self.slider_released)
                 #This line below makes it so that when the slider is moved it updates the position but only when the user is clicking on it
                 self.slider.sliderMoved.connect(self.player.setPosition)
+
+
 
                 #The following line gets the path to the file using the attribute audio_files_dir and adding the file_name.mp3
                 new_audio_file= self.audio_files_dir / f"{self.mp3_basename}.mp3"
@@ -848,10 +881,17 @@ class Voice_recorder(QMainWindow):
 
 
     def update_slider(self, position):
+        if hasattr(self, 'current_position') and self.one_time:
+            self.player.setPosition(self.current_position)
+            self.slider.setValue(self.current_position)
+            self.one_time=False
+            self.time.setText(f'{self.hours:02d}:{self.minutes:02d}:{self.seconds:02d}/{self.hours_2:02d}:{self.minutes_2:02d}:{self.seconds_2:02d}')
         #Self.slider.isSliderDown() checks if the slider is being held or dragged and returns a bool
         #So the if statment says that not holding the slider or dragged it updates the position
         if not self.slider.isSliderDown():
             self.slider.setValue(position)
+            self.total_duration(int(self.duration)*1000)
+            self.time.setText(f'{self.hours:02d}:{self.minutes:02d}:{self.seconds:02d}/{self.hours_2:02d}:{self.minutes_2:02d}:{self.seconds_2:02d}')
 
     def slider_pressed(self):
         #If the slider is pressed it stops the audio
@@ -868,6 +908,7 @@ class Voice_recorder(QMainWindow):
         self.player.setPosition(self.slider.value())
 
     def update_time(self):
+        self.total_duration(int(self.duration)*1000)
         value= str(int(self.slider.value()) // 1000)
         add_zeros= int(7- len(value))
         time_2= f'{int(value):0{add_zeros}d}'
@@ -876,6 +917,42 @@ class Voice_recorder(QMainWindow):
         self.seconds= int(time_2[3:6])
 
         self.time.setText(f'{self.hours:02d}:{self.minutes:02d}:{self.seconds:02d}/{self.hours_2:02d}:{self.minutes_2:02d}:{self.seconds_2:02d}')
+
+
+    def update_slider_2(self, position):
+        #Self.slider.isSliderDown() checks if the slider is being held or dragged and returns a bool
+        #So the if statment says that not holding the slider or dragged it updates the position
+        if not self.slider.isSliderDown():
+            self.slider.setValue(position)
+
+    def slider_pressed_2(self):
+        #If the slider is pressed it stops the audio
+        self.player.positionChanged.disconnect(self.update_slider_2)
+        self.slider.sliderMoved.connect(self.update_time_2)
+
+    def slider_released_2(self):
+        self.update_time()
+        #It makes it so the slider starts updating again and audio
+        self.player.positionChanged.connect(self.update_slider_2)
+        #This updates the player to the new position
+        self.player.setPosition(self.slider.value())
+
+    def update_time_2(self):
+        self.total_duration(int(self.duration)*1000)
+        value= str(int(self.slider.value()) // 1000)
+        add_zeros= int(7- len(value))
+        time_2= f'{int(value):0{add_zeros}d}'
+        self.hours= int(time_2[0:2])
+        self.minutes= int(time_2[2:3])
+        self.seconds= int(time_2[3:6])
+
+        self.time.setText(f'{self.hours:02d}:{self.minutes:02d}:{self.seconds:02d}/{self.hours_2:02d}:{self.minutes_2:02d}:{self.seconds_2:02d}')
+
+
+    def before_player(self):
+        self.current_position= self.slider.value()
+
+
 
 if __name__ == "__main__":
     main()
