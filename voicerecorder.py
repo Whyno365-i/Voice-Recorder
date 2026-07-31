@@ -46,6 +46,7 @@ class Voice_recorder(QMainWindow):
         self.audio_output= QAudioOutput()
         self.player.setAudioOutput(self.audio_output)
         self.audio_output.setVolume(1.0)
+
         
         self.main_app()
     
@@ -183,13 +184,6 @@ class Voice_recorder(QMainWindow):
         container_inner_bottom_main.setStyleSheet("background-color: #353535; border-radius: 5px;")
         self.audio_place= QVBoxLayout(container_inner_bottom_main)
 
-        #Start container_inner_bottom_main
-
-
-
-
-
-        #End container_inner_bottom_main
 
         Top_inner.addWidget(container_inner_top_bar, stretch=1)
         Top_inner.addWidget(container_inner_bottom_main, stretch=13)
@@ -428,15 +422,18 @@ class Voice_recorder(QMainWindow):
 
         self.total_duration(int(self.duration)*1000)
 
-        #TODO fix pause button
-        #TODO Timestamp buttons at 10%, 20%, 30%...
+    
+        self.timestamp_buttons()
+
 
         try:
             self.slider.deleteLater()
             n= 0
+
         except RuntimeError:
             self.slider= QSlider(Qt.Orientation.Horizontal)
             n=1
+
         except AttributeError:
             self.slider= QSlider(Qt.Orientation.Horizontal)
             n=1
@@ -477,7 +474,6 @@ class Voice_recorder(QMainWindow):
         self.slider.sliderReleased.connect(self.slider_released_2)
         #This line below makes it so that when the slider is moved it updates the position but only when the user is clicking on it
         self.slider.sliderMoved.connect(self.before_player)
-
 
 
     def play(self, playing):
@@ -579,6 +575,7 @@ class Voice_recorder(QMainWindow):
     def pause(self):
         if not self.is_paused:
             self.player.pause()
+            self.amount_time_2.timeout.disconnect(self.playing_clock)
             self.is_paused= True
             self.Pause_button.setText('▶')
             self.Pause_button.setStyleSheet(f"""
@@ -597,6 +594,7 @@ class Voice_recorder(QMainWindow):
         else:
             self.player.play()
             self.is_paused= False
+            self.slider_released()
             self.Pause_button.setText('| |')
             self.Pause_button.setStyleSheet(f"""
                 QPushButton {{
@@ -900,6 +898,11 @@ class Voice_recorder(QMainWindow):
         self.slider.sliderMoved.connect(self.update_time)
 
     def slider_released(self):
+        if self.is_paused:
+            self.update_time()
+            return
+
+
         self.update_time()
         #It makes it so the slider starts updating again and audio
         self.player.positionChanged.connect(self.update_slider)
@@ -909,12 +912,13 @@ class Voice_recorder(QMainWindow):
 
     def update_time(self):
         self.total_duration(int(self.duration)*1000)
-        value= str(int(self.slider.value()) // 1000)
-        add_zeros= int(7- len(value))
-        time_2= f'{int(value):0{add_zeros}d}'
-        self.hours= int(time_2[0:2])
-        self.minutes= int(time_2[2:3])
-        self.seconds= int(time_2[3:6])
+        value= int(self.slider.value()) // 1000
+
+        total_seconds= value
+
+        self.hours= total_seconds // 3600
+        self.minutes= (total_seconds % 3600) // 60
+        self.seconds= total_seconds % 60
 
         self.time.setText(f'{self.hours:02d}:{self.minutes:02d}:{self.seconds:02d}/{self.hours_2:02d}:{self.minutes_2:02d}:{self.seconds_2:02d}')
 
@@ -939,18 +943,161 @@ class Voice_recorder(QMainWindow):
 
     def update_time_2(self):
         self.total_duration(int(self.duration)*1000)
-        value= str(int(self.slider.value()) // 1000)
-        add_zeros= int(7- len(value))
-        time_2= f'{int(value):0{add_zeros}d}'
-        self.hours= int(time_2[0:2])
-        self.minutes= int(time_2[2:3])
-        self.seconds= int(time_2[3:6])
+        value= int(self.slider.value()) // 1000
+
+        total_seconds= value
+
+        self.hours= total_seconds // 3600
+        self.minutes= (total_seconds % 3600) // 60
+        self.seconds= total_seconds % 60
 
         self.time.setText(f'{self.hours:02d}:{self.minutes:02d}:{self.seconds:02d}/{self.hours_2:02d}:{self.minutes_2:02d}:{self.seconds_2:02d}')
 
 
     def before_player(self):
         self.current_position= self.slider.value()
+
+    def timestamp_buttons(self):
+        #TODO Finish styling the buttons
+        #TODO Make it work
+
+
+        #hasattr only works on attributes so you need self
+        #You should only use hasattr on attributes not local variables
+        if not hasattr(self, 'timestamp_container'):
+            self.timestamp_container= QWidget()
+            self.timestamp_container.setStyleSheet("background-color: Transparent; border-radius: 5px;")
+            self.audio_place.addWidget(self.timestamp_container, stretch=2)
+            self.timestamps= QHBoxLayout(self.timestamp_container)
+
+        else:
+            pass
+
+
+        if hasattr(self, 'twenty'):
+            self.twenty.deleteLater()
+            self.fourty.deleteLater()
+            self.fifty.deleteLater()
+            self.sixety.deleteLater()
+            self.eighty.deleteLater()
+    
+        twenty_text= f'{self.duration * .20:.2f}'
+
+        if float(twenty_text) >= 60:
+            twenty_minutes= float(twenty_text) // 60
+
+            twenty_seconds= float(twenty_text) % 60
+
+            twenty_text= f'{int(twenty_minutes)}:{twenty_seconds:.2f}'
+
+        else:
+            twenty_text= f'00:{twenty_text}'
+
+
+        fourty_text= f'{self.duration * .40:.2f}'
+
+        if float(fourty_text) >= 60:
+            fourty_minutes= float(fourty_text) // 60
+
+            fourty_seconds= float(fourty_text) % 60
+
+            twenty_text= f'{int(fourty_minutes)}:{fourty_seconds:.2f}'
+
+        else:
+            fourty_text= f'00:{fourty_text}'
+
+
+        fifty_text= f'{self.duration * .50:.2f}'
+
+        if float(fifty_text) >= 60:
+            fifty_minutes= float(fifty_text) // 60
+
+            fifty_seconds= float(fifty_text) % 60
+
+            fifty_text= f'{int(fifty_minutes)}:{fifty_seconds:.2f}'
+
+        else:
+            fifty_text= f'00:{fifty_text}'
+
+
+        sixety_text= f'{self.duration * .60:.2f}'
+
+        if float(sixety_text) >= 60:
+            sixety_minutes= float(sixety_text) // 60
+
+            sixety_seconds= float(sixety_text) % 60
+
+            sixety_text= f'{int(sixety_minutes)}:{sixety_seconds:.2f}'
+
+        else:
+            sixety_text= f'00:{sixety_text}'
+
+
+        eighty_text= f'{self.duration * .80:.2f}'
+
+        if float(eighty_text) >= 60:
+            eighty_minutes= float(eighty_text) // 60
+
+            eighty_seconds= float(eighty_text) % 60
+
+            eighty_text= f'{int(eighty_minutes)}:{eighty_seconds:.2f}'
+
+        else:
+            eighty_text= f'00:{eighty_text}'
+
+        self.twenty= QPushButton()
+        #You use d for ints and f for floats 
+        self.twenty.setText(twenty_text)
+        self.twenty.setStyleSheet('''
+            QPushButton {
+                border: 2px solid #FFFFFF;
+            }
+''')
+
+        self.fourty= QPushButton()
+        #You use d for ints and f for floats 
+        self.fourty.setText(fourty_text)
+        self.fourty.setStyleSheet('''
+            QPushButton {
+                border: 2px solid #FFFFFF;
+            }
+''')
+
+        self.fifty= QPushButton()
+        #You use d for ints and f for floats 
+        self.fifty.setText(fifty_text)
+        self.fifty.setStyleSheet('''
+            QPushButton {
+                border: 2px solid #FFFFFF;
+            }
+''')
+
+
+        self.sixety= QPushButton()
+        #You use d for ints and f for floats 
+        self.sixety.setText(sixety_text)
+        self.sixety.setStyleSheet('''
+            QPushButton {
+                border: 2px solid #FFFFFF;
+            }
+''')
+
+
+        self.eighty= QPushButton()
+        #You use d for ints and f for floats 
+        self.eighty.setText(eighty_text)
+        self.eighty.setStyleSheet('''
+            QPushButton {
+                border: 2px solid #FFFFFF;
+            }
+''')
+
+
+        self.timestamps.addWidget(self.twenty)
+        self.timestamps.addWidget(self.fourty)
+        self.timestamps.addWidget(self.fifty)
+        self.timestamps.addWidget(self.sixety)
+        self.timestamps.addWidget(self.eighty)
 
 
 
