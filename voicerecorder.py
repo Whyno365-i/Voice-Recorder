@@ -7,7 +7,7 @@ from send2trash import send2trash
 from mutagen.mp3 import MP3 
 import re
 from PySide6.QtWidgets import (QApplication, QMainWindow, QLabel, QWidget, QGridLayout, QLineEdit, QVBoxLayout, QHBoxLayout, QPushButton,
-                               QComboBox, QListWidget, QMenu, QDialog, QSlider)
+                               QComboBox, QListWidget, QMenu, QDialog, QSlider, QSpacerItem)
 from PySide6.QtCore import Qt, QSize, QUrl, QTimer
 from PySide6.QtGui import QFont, QAction
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
@@ -22,6 +22,7 @@ def main():
 
 class Voice_recorder(QMainWindow):
     def __init__(self):
+        #TODO Make app logo
         super().__init__()
         self.setWindowTitle('Voice Recorder')
         self.resize(1100, 700)
@@ -180,13 +181,32 @@ class Voice_recorder(QMainWindow):
 
         #End Container_inner_top_bar
 
-        container_inner_bottom_main= QWidget()
-        container_inner_bottom_main.setStyleSheet("background-color: #353535; border-radius: 5px;")
-        self.audio_place= QVBoxLayout(container_inner_bottom_main)
+        self.container_inner_bottom_main= QWidget()
+        self.container_inner_bottom_main.setStyleSheet("background-color: #353535; border-radius: 5px;")
+        self.audio_place= QVBoxLayout(self.container_inner_bottom_main)
 
+
+        self.container_record= QWidget()
+        self.container_record.setStyleSheet("background-color: #353535; border-radius: 5px;")
+        self.record_place= QHBoxLayout(self.container_record)
+
+        #Start container_record
+        self.recording= QLabel('Recording')
+        self.recording.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.recording.setStyleSheet('''
+            QLabel{
+                font: 50px;
+            }
+''')
+
+
+        self.recording_label()
+        #End container_record
 
         Top_inner.addWidget(container_inner_top_bar, stretch=1)
-        Top_inner.addWidget(container_inner_bottom_main, stretch=13)
+        Top_inner.addWidget(self.container_inner_bottom_main, stretch=13)
+        Top_inner.addWidget(self.container_record, stretch=13)
+        self.container_record.hide()
 
 
         #End Container_main
@@ -359,6 +379,8 @@ class Voice_recorder(QMainWindow):
             self.Play_button.hide()
             self.Back_to_beginning.hide()
             self.time_speed.hide()
+            self.container_inner_bottom_main.hide()
+            self.container_record.show()
             self.amount_time= QTimer(self)
             self.amount_time.timeout.connect(self.clock)
             self.amount_time.start(1000)
@@ -401,6 +423,8 @@ class Voice_recorder(QMainWindow):
         else:
             self.container_side_bar.show()
             self.is_showing=True
+
+        self.recording_label()
     
     #The @property makes the function an attribute making it easier to compute. (saves computing power)
     @property
@@ -660,6 +684,8 @@ class Voice_recorder(QMainWindow):
             self.Play_button.show()
             self.Back_to_beginning.show()
             self.time_speed.show()
+            self.container_inner_bottom_main.show()
+            self.container_record.hide()
             self.amount_time.stop()
             self.time.setText('00:00:00/00:00:00')
             self.time.setFont(QFont('Arial', 20))
@@ -739,6 +765,8 @@ class Voice_recorder(QMainWindow):
             self.hours+=1
 
         self.time.setText(f'{self.hours:02d}:{self.minutes:02d}:{self.seconds:02d}')
+
+        self.update_recording_label()
 
 
     def total_duration(self, duration):
@@ -958,10 +986,6 @@ class Voice_recorder(QMainWindow):
         self.current_position= self.slider.value()
 
     def timestamp_buttons(self):
-        #TODO Finish styling the buttons
-        #TODO Make it work
-
-
         #hasattr only works on attributes so you need self
         #You should only use hasattr on attributes not local variables
         if not hasattr(self, 'timestamp_container'):
@@ -1001,7 +1025,7 @@ class Voice_recorder(QMainWindow):
 
             fourty_seconds= float(fourty_text) % 60
 
-            twenty_text= f'{int(fourty_minutes)}:{fourty_seconds:.2f}'
+            fourty_text= f'{int(fourty_minutes)}:{fourty_seconds:.2f}'
 
         else:
             fourty_text= f'00:{fourty_text}'
@@ -1051,6 +1075,7 @@ class Voice_recorder(QMainWindow):
         self.twenty.setStyleSheet('''
             QPushButton {
                 border: 2px solid #FFFFFF;
+                max-width: 60px;
             }
 ''')
 
@@ -1060,6 +1085,7 @@ class Voice_recorder(QMainWindow):
         self.fourty.setStyleSheet('''
             QPushButton {
                 border: 2px solid #FFFFFF;
+                max-width: 60px;
             }
 ''')
 
@@ -1069,6 +1095,7 @@ class Voice_recorder(QMainWindow):
         self.fifty.setStyleSheet('''
             QPushButton {
                 border: 2px solid #FFFFFF;
+                max-width: 60px;
             }
 ''')
 
@@ -1079,6 +1106,7 @@ class Voice_recorder(QMainWindow):
         self.sixety.setStyleSheet('''
             QPushButton {
                 border: 2px solid #FFFFFF;
+                max-width: 60px;
             }
 ''')
 
@@ -1089,8 +1117,16 @@ class Voice_recorder(QMainWindow):
         self.eighty.setStyleSheet('''
             QPushButton {
                 border: 2px solid #FFFFFF;
+                max-width: 60px;
             }
 ''')
+        
+        self.twenty.clicked.connect(lambda: self.timestamp_function(self.twenty))
+        self.fourty.clicked.connect(lambda: self.timestamp_function(self.fourty))
+        self.fifty.clicked.connect(lambda: self.timestamp_function(self.fifty))
+        self.sixety.clicked.connect(lambda: self.timestamp_function(self.sixety))
+        self.eighty.clicked.connect(lambda: self.timestamp_function(self.eighty))
+
 
 
         self.timestamps.addWidget(self.twenty)
@@ -1100,6 +1136,53 @@ class Voice_recorder(QMainWindow):
         self.timestamps.addWidget(self.eighty)
 
 
+    def timestamp_function(self, button):
+        if button == self.twenty:
+            self.new_value= self.duration * 200
+
+        if button == self.fourty:
+            self.new_value= self.duration * 400
+
+        if button == self.fifty:
+            self.new_value= self.duration * 500
+
+        if button == self.sixety:
+            self.new_value= self.duration * 600
+
+        if button == self.eighty:
+            self.new_value= self.duration * 800 
+
+        self.slider.setSliderPosition(self.new_value)
+        self.slider_released_2()
+        self.before_player()
+
+
+    def recording_label(self):
+        if hasattr(self, 'spacer'):
+            self.record_place.removeItem(self.spacer)
+
+        if self.is_showing:
+            self.spacer= QSpacerItem(95, 20)
+            self.record_place.addWidget(self.recording)
+            self.record_place.addItem(self.spacer)
+
+        else:
+            self.record_place.addWidget(self.recording)
+
+
+    def update_recording_label(self):
+        if self.recording.text() == 'Recording':
+            self.recording.setText('Recording.')
+
+        elif self.recording.text() == 'Recording.':
+            self.recording.setText('Recording..')
+
+        elif self.recording.text() == 'Recording..':
+            self.recording.setText('Recording...')
+
+        elif self.recording.text() == 'Recording...':
+            self.recording.setText('Recording')
+        
 
 if __name__ == "__main__":
     main()
