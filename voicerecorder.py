@@ -3,13 +3,14 @@ import soundfile as sf
 import numpy as np
 from pathlib import Path
 import os
+import ctypes
 from send2trash import send2trash
 from mutagen.mp3 import MP3 
 import re
 from PySide6.QtWidgets import (QApplication, QMainWindow, QLabel, QWidget, QGridLayout, QLineEdit, QVBoxLayout, QHBoxLayout, QPushButton,
                                QComboBox, QListWidget, QMenu, QDialog, QSlider, QSpacerItem)
 from PySide6.QtCore import Qt, QSize, QUrl, QTimer
-from PySide6.QtGui import QFont, QAction
+from PySide6.QtGui import QFont, QAction, QIcon
 from PySide6.QtMultimedia import QMediaPlayer, QAudioOutput
 
 def main():
@@ -25,6 +26,8 @@ class Voice_recorder(QMainWindow):
         #TODO Make app logo
         super().__init__()
         self.setWindowTitle('Voice Recorder')
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('mycompany.myproduct.subproduct.version')
+        self.setWindowIcon(QIcon('App_logo.png'))
         self.resize(1100, 700)
         self.setMinimumSize(500, 500)
 
