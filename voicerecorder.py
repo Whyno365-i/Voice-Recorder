@@ -27,7 +27,7 @@ class Voice_recorder(QMainWindow):
         super().__init__()
         self.setWindowTitle('Voice Recorder')
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('mycompany.myproduct.subproduct.version')
-        self.setWindowIcon(QIcon('App_logo.png'))
+        self.setWindowIcon(QIcon('App_logo.ico'))
         self.resize(1100, 700)
         self.setMinimumSize(500, 500)
 
